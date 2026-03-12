@@ -1108,82 +1108,80 @@ function openImportModal(){
 
 async function importProgram(){
   const statusEl=document.getElementById('import-status');
+  statusEl.style.display='block';
   const name=document.getElementById('inp-import-prog-name').value.trim();
-  if(!name){statusEl.style.display='block';statusEl.style.color='var(--red)';statusEl.textContent='Please enter a program name.';return;}
-  
+  if(!name){statusEl.style.color='var(--red)';statusEl.textContent='Please enter a program name.';return;}
+
   let rawData='';
   const file=document.getElementById('inp-import-file').files[0];
   const pastedData=document.getElementById('inp-import-data').value.trim();
-  
   if(file){
     rawData=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsText(file);});
   } else if(pastedData){
     rawData=pastedData;
   } else {
-    statusEl.style.display='block';statusEl.style.color='var(--red)';statusEl.textContent='Please paste data or upload a file.';return;
+    statusEl.style.color='var(--red)';statusEl.textContent='Please paste data or upload a file.';return;
   }
-  
-  statusEl.style.display='block';statusEl.style.color='var(--muted)';statusEl.textContent='Processing…';
-  
-  // Use AI to parse the program data
+
+  statusEl.style.color='var(--muted)';statusEl.textContent='Parsing…';
+
   try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
-      model:'claude-sonnet-4-20250514',max_tokens:3000,
-      messages:[{role:'user',content:`Parse this fitness program data into structured JSON. The data may be tab-separated, comma-separated, or in any format from Google Sheets or Excel.
+    // Parse tab-separated or comma-separated rows
+    // Columns: Exercise, Sets, Reps, Weight, RPE, Notes, Day, Week
+    const lines=rawData.split('\n').map(l=>l.trim()).filter(l=>l&&!l.toLowerCase().startsWith('exercise'));
+    if(!lines.length){statusEl.style.color='var(--red)';statusEl.textContent='No data found — check format.';return;}
 
-Data:
-${rawData.slice(0,3000)}
+    // Detect separator
+    const sep=lines[0].includes('\t')?'\t':',';
 
-Return ONLY a JSON object like this:
-{
-  "weeks": [
-    {
-      "week_num": 1,
-      "days": [
-        {
-          "day_label": "Monday",
-          "exercises": [
-            {"name": "Squat", "sets": 4, "reps": 5, "weight": 100, "rpe": 8, "notes": "Keep chest up"}
-          ]
-        }
-      ]
+    // Build structure: {weekNum: {dayLabel: [exercises]}}
+    const structure={};
+    let parseErrors=0;
+    for(const line of lines){
+      const parts=line.split(sep).map(p=>p.trim().replace(/^"|"$/g,''));
+      if(parts.length<2) continue;
+      const exName=parts[0];
+      if(!exName) continue;
+      const sets=parseInt(parts[1])||null;
+      const reps=parts[2]||null;
+      const weight=parseFloat(parts[3])||null;
+      const rpe=parseFloat(parts[4])||null;
+      const notes=parts[5]||null;
+      const dayLabel=parts[6]||'Day 1';
+      const weekNum=parseInt(parts[7])||1;
+      if(!structure[weekNum]) structure[weekNum]={};
+      if(!structure[weekNum][dayLabel]) structure[weekNum][dayLabel]=[];
+      structure[weekNum][dayLabel].push({name:exName,sets,reps,weight,rpe,notes});
     }
-  ]
-}
 
-Rules:
-- Group exercises by day and week
-- If no week info, assume Week 1
-- If no day info, group all into Day 1
-- sets/reps/weight/rpe should be numbers or null
-- Return ONLY the JSON, no other text`}]
-    })});
-    const data=await res.json();
-    const parsed=JSON.parse(data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim());
-    
-    // Create program in DB
-    const {data:prog}=await sb.from('programs').insert({client_id:selClientId,name,is_template:false}).select().single();
-    for(const week of parsed.weeks||[]){
-      const {data:newWeek}=await sb.from('program_weeks').insert({program_id:prog.id,week_num:week.week_num}).select().single();
-      for(let di=0;di<(week.days||[]).length;di++){
-        const day=week.days[di];
-        const {data:newDay}=await sb.from('program_days').insert({week_id:newWeek.id,day_label:day.day_label,order_index:di}).select().single();
-        for(let ei=0;ei<(day.exercises||[]).length;ei++){
-          const ex=day.exercises[ei];
-          if(!ex.name) continue;
-          await sb.from('program_exercises').insert({day_id:newDay.id,name:ex.name,sets:ex.sets||null,reps:ex.reps||null,weight:ex.weight||null,rpe:ex.rpe||null,notes:ex.notes||null,order_index:ei});
+    const weekNums=Object.keys(structure).map(Number).sort((a,b)=>a-b);
+    if(!weekNums.length){statusEl.style.color='var(--red)';statusEl.textContent='Could not parse any exercises. Check your data.';return;}
+
+    // Save to Supabase
+    const {data:prog,error:progErr}=await sb.from('programs').insert({client_id:selClientId,name,is_template:false}).select().single();
+    if(progErr){statusEl.style.color='var(--red)';statusEl.textContent='Database error — try again.';return;}
+
+    for(const wn of weekNums){
+      const {data:newWeek}=await sb.from('program_weeks').insert({program_id:prog.id,week_num:wn}).select().single();
+      const days=Object.keys(structure[wn]);
+      for(let di=0;di<days.length;di++){
+        const dayLabel=days[di];
+        const {data:newDay}=await sb.from('program_days').insert({week_id:newWeek.id,day_label:dayLabel,order_index:di}).select().single();
+        const exs=structure[wn][dayLabel];
+        for(let ei=0;ei<exs.length;ei++){
+          const ex=exs[ei];
+          await sb.from('program_exercises').insert({day_id:newDay.id,name:ex.name,sets:ex.sets,reps:ex.reps,weight:ex.weight,rpe:ex.rpe,notes:ex.notes,order_index:ei});
         }
       }
     }
-    
+
     statusEl.style.color='var(--green)';
-    statusEl.textContent=`✓ Imported ${parsed.weeks?.length||0} weeks successfully!`;
+    statusEl.textContent=`✓ Imported ${weekNums.length} week${weekNums.length>1?'s':''} — ${lines.length} exercises!`;
     document.getElementById('inp-import-data').value='';
     document.getElementById('inp-import-prog-name').value='';
-    setTimeout(()=>{closeModal('importProgram');setTab('program');},1500);
+    setTimeout(()=>{closeModal('importProgram');setTab('program');},1800);
   } catch(e){
-    statusEl.style.color='var(--red)';
-    statusEl.textContent='Could not parse data. Check format and try again.';
+    statusEl.style.color='var(--red)';statusEl.textContent='Error: '+e.message;
   }
 }
 
