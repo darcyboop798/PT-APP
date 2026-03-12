@@ -69,7 +69,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- TODAY -->
 <div id="screen-today" class="screen">
-  <div style="background:linear-gradient(135deg,#1a1f00 0%,#0d1200 100%);border-bottom:1px solid rgba(200,255,0,.15);padding:28px 20px 20px">
+  <div style="background:linear-gradient(135deg,#1a1f00 0%,#0d1200 100%);border-bottom:1px solid rgba(200,255,0,.15);padding:max(48px,env(safe-area-inset-top,48px)) 20px 20px">
     <div style="font-size:11px;color:rgba(200,255,0,.6);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Good work 💪</div>
     <div id="hero-name" class="bc" style="font-size:36px;font-weight:900;line-height:1;margin-bottom:4px">Loading…</div>
     <div id="hero-goal" style="font-size:13px;color:var(--muted)"></div>
@@ -81,12 +81,19 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
     <div id="today-stats" style="margin-bottom:16px"></div>
     <div id="today-cals-card" style="margin-bottom:16px"></div>
     <div id="today-hydration-card" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px;flex-wrap:wrap">
+      <button onclick="openModal('manageHabits');loadHabitsModal()" class="btn-tag" style="font-size:12px">✅ Habits</button>
+      <button onclick="openPhotoCompare()" class="btn-tag" style="font-size:12px">📸 Compare</button>
+      <button onclick="openReferralModal()" class="btn-tag" style="font-size:12px">🎁 Refer</button>
+      <button onclick="openModal('nutritionSettings');loadNutritionSettings()" class="btn-tag" style="font-size:12px">🎯 Targets</button>
+      <button onclick="openModal('theme')" class="btn-tag" style="font-size:12px">🎨 Theme</button>
+    </div>
   </div>
 </div>
 
 <!-- PROGRAM -->
 <div id="screen-program" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Your Program</div>
     <div id="program-title" class="bc" style="font-size:28px;font-weight:800;margin-bottom:20px"></div>
     <div id="program-body"></div>
@@ -95,7 +102,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- PROGRESS -->
 <div id="screen-progress" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Your Progress</div>
     <div class="bc" style="font-size:28px;font-weight:800;margin-bottom:20px">Stats</div>
     <div id="progress-body"></div>
@@ -104,7 +111,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- FOOD -->
 <div id="screen-food" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Nutrition</div>
     <div class="bc" style="font-size:28px;font-weight:800;margin-bottom:4px">Food Diary</div>
     <div id="food-header-row" class="row" style="margin-bottom:16px"></div>
@@ -114,7 +121,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- LOG -->
 <div id="screen-log" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:8px">Log</div>
     <div style="display:flex;gap:8px;margin-bottom:20px">
       <button id="logtab-workout" onclick="setLogTab('workout')" style="padding:8px 20px;border-radius:20px;border:none;font-size:13px;font-weight:800;background:var(--accent);color:#0d0d0d">💪 Workout</button>
@@ -126,7 +133,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- MESSAGES -->
 <div id="screen-msgs" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Messages</div>
     <div class="bc" style="font-size:28px;font-weight:800;margin-bottom:20px">💬 Darcy</div>
     <div id="msgs-body"></div>
@@ -922,6 +929,124 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});
 });
 
+
+
+// ─── HABITS MANAGEMENT ───────────────────────────────────────────────────────
+async function loadHabitsModal(){
+  const {data:habits}=await sb.from('habits').select('*').eq('client_id',clientId);
+  document.getElementById('habits-list-modal').innerHTML=(habits||[]).map(h=>`
+    <div class="row" style="padding:10px 0;border-bottom:1px solid var(--border)">
+      <span style="font-size:15px">${h.emoji||'✓'} ${h.name}</span>
+      <button onclick="deleteHabit('${h.id}')" style="background:none;border:none;color:var(--red);font-size:18px;padding:0 4px">×</button>
+    </div>`).join('')||'<div style="font-size:13px;color:var(--muted);padding:10px 0">No habits yet — add one below!</div>';
+}
+
+async function addHabit(){
+  const name=document.getElementById('new-habit-name').value.trim();
+  const emoji=document.getElementById('new-habit-emoji').value.trim()||'✓';
+  if(!name) return;
+  await sb.from('habits').insert({client_id:clientId,name,emoji});
+  document.getElementById('new-habit-name').value='';
+  document.getElementById('new-habit-emoji').value='';
+  toast('Habit added!');
+  loadHabitsModal();
+  renderToday();
+}
+
+async function deleteHabit(id){
+  await sb.from('habits').delete().eq('id',id);
+  await sb.from('habit_logs').delete().eq('habit_id',id);
+  loadHabitsModal();
+  renderToday();
+}
+
+// ─── PHOTO COMPARISON ────────────────────────────────────────────────────────
+async function openPhotoCompare(){
+  const {data:photos}=await sb.from('progress_photos').select('*').eq('client_id',clientId).order('created_at',{ascending:true});
+  const body=document.getElementById('compare-body');
+  if(!photos||photos.length<2){
+    body.innerHTML='<div style="text-align:center;color:var(--muted);padding:20px">Upload at least 2 progress photos to compare.</div>';
+  } else {
+    const first=photos[0];const last=photos[photos.length-1];
+    const url1=sb.storage.from('progress-photos').getPublicUrl(first.storage_path).data.publicUrl;
+    const url2=sb.storage.from('progress-photos').getPublicUrl(last.storage_path).data.publicUrl;
+    body.innerHTML=`
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px">
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--muted);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Before · ${first.date}</div>
+          <img src="${url1}" style="width:100%;border-radius:12px;aspect-ratio:3/4;object-fit:cover"/>
+        </div>
+        <div style="text-align:center">
+          <div style="font-size:11px;color:var(--accent);margin-bottom:6px;text-transform:uppercase;letter-spacing:1px">Latest · ${last.date}</div>
+          <img src="${url2}" style="width:100%;border-radius:12px;aspect-ratio:3/4;object-fit:cover"/>
+        </div>
+      </div>
+      <div style="text-align:center;margin-top:14px;font-size:13px;color:var(--muted)">${photos.length} photos total · ${first.date} → ${last.date}</div>`;
+  }
+  openModal('photoCompare');
+}
+
+// ─── REFERRAL ─────────────────────────────────────────────────────────────────
+async function openReferralModal(){
+  const {data:client}=await sb.from('clients').select('referral_code').eq('id',clientId).single();
+  document.getElementById('referral-code-display').textContent=client?.referral_code||'—';
+  openModal('referral');
+}
+
+async function shareReferral(){
+  const code=document.getElementById('referral-code-display').textContent;
+  const text=`Join me on Darcy's PT! Use my referral code ${code} when you sign up at ptappdj.netlify.app/client.html`;
+  if(navigator.share){
+    navigator.share({title:"Darcy's PT",text,url:'https://ptappdj.netlify.app/client.html'});
+  } else {
+    navigator.clipboard.writeText(text);
+    toast('Link copied!');
+  }
+}
+
+// ─── NUTRITION PERIODISATION ─────────────────────────────────────────────────
+async function loadNutritionSettings(){
+  const {data:p}=await sb.from('client_preferences').select('*').eq('client_id',clientId).single();
+  if(p){
+    document.getElementById('nt-train-cals').value=p.train_cal_target||'';
+    document.getElementById('nt-train-protein').value=p.train_protein_target||'';
+    document.getElementById('nt-train-carbs').value=p.train_carbs_target||'';
+    document.getElementById('nt-train-fat').value=p.train_fat_target||'';
+    document.getElementById('nt-rest-cals').value=p.rest_cal_target||'';
+    document.getElementById('nt-rest-protein').value=p.rest_protein_target||'';
+    document.getElementById('nt-rest-carbs').value=p.rest_carbs_target||'';
+    document.getElementById('nt-rest-fat').value=p.rest_fat_target||'';
+  }
+}
+
+async function saveNutritionTargets(){
+  await sb.from('client_preferences').upsert({
+    client_id:clientId,
+    train_cal_target:+document.getElementById('nt-train-cals').value||null,
+    train_protein_target:+document.getElementById('nt-train-protein').value||null,
+    train_carbs_target:+document.getElementById('nt-train-carbs').value||null,
+    train_fat_target:+document.getElementById('nt-train-fat').value||null,
+    rest_cal_target:+document.getElementById('nt-rest-cals').value||null,
+    rest_protein_target:+document.getElementById('nt-rest-protein').value||null,
+    rest_carbs_target:+document.getElementById('nt-rest-carbs').value||null,
+    rest_fat_target:+document.getElementById('nt-rest-fat').value||null,
+  });
+  closeModal('nutritionSettings');
+  toast('Nutrition targets saved!');
+}
+
+// Helper to get today's calorie target (training vs rest day)
+async function getTodayCalTarget(){
+  const {data:p}=await sb.from('client_preferences').select('*').eq('client_id',clientId).single();
+  if(!p) return 2000;
+  // Check if there's a workout today
+  const {data:todayWorkout}=await sb.from('workouts').select('id').eq('client_id',clientId).eq('date',fmtToday()).single();
+  const isTrainingDay=!!todayWorkout;
+  if(isTrainingDay && p.train_cal_target) return p.train_cal_target;
+  if(!isTrainingDay && p.rest_cal_target) return p.rest_cal_target;
+  return p.cal_target||2000;
+}
+
 // ─── AUTO LOGIN ──────────────────────────────────────────────────────────────
 (async()=>{
   const savedId=localStorage.getItem('pt-client-id');
@@ -938,5 +1063,65 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
   }
 })();
 </script>
+
+<div id="modal-manageHabits" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">My Habits</div>
+    <div id="habits-list-modal" style="margin-bottom:16px"></div>
+    <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Add New Habit</div>
+    <div style="display:flex;gap:8px;margin-bottom:10px">
+      <input id="new-habit-emoji" placeholder="🏃" style="width:60px;flex-shrink:0;text-align:center;font-size:20px;padding:10px 6px"/>
+      <input id="new-habit-name" placeholder="e.g. Hit 8000 steps" style="flex:1"/>
+    </div>
+    <button class="btn-primary" onclick="addHabit()">Add Habit</button>
+  </div>
+</div>
+
+<div id="modal-photoCompare" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">📸 Progress Comparison</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Swipe to compare your first and latest photos.</div>
+    <div id="compare-body"></div>
+  </div>
+</div>
+
+<div id="modal-referral" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">🎁 Refer a Friend</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Share your code — if they sign up you get a discount month!</div>
+    <div style="background:var(--accentdim);border:1px solid rgba(200,255,0,.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:20px">
+      <div style="font-size:11px;color:var(--accent);text-transform:uppercase;letter-spacing:2px;margin-bottom:8px">Your Referral Code</div>
+      <div id="referral-code-display" class="bc" style="font-size:36px;font-weight:900;color:var(--accent);letter-spacing:4px"></div>
+    </div>
+    <button class="btn-primary" onclick="shareReferral()">Share Code 📤</button>
+  </div>
+</div>
+
+<div id="modal-nutritionSettings" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">Nutrition Targets</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Set different targets for training days vs rest days.</div>
+    <div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Training Days</div>
+    <div class="grid2" style="margin-bottom:16px">
+      <div><label class="label">Calories</label><input id="nt-train-cals" type="number" placeholder="e.g. 2400"/></div>
+      <div><label class="label">Protein (g)</label><input id="nt-train-protein" type="number" placeholder="e.g. 180"/></div>
+      <div><label class="label">Carbs (g)</label><input id="nt-train-carbs" type="number" placeholder="e.g. 280"/></div>
+      <div><label class="label">Fat (g)</label><input id="nt-train-fat" type="number" placeholder="e.g. 70"/></div>
+    </div>
+    <div style="font-size:12px;font-weight:800;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Rest Days</div>
+    <div class="grid2" style="margin-bottom:20px">
+      <div><label class="label">Calories</label><input id="nt-rest-cals" type="number" placeholder="e.g. 1900"/></div>
+      <div><label class="label">Protein (g)</label><input id="nt-rest-protein" type="number" placeholder="e.g. 150"/></div>
+      <div><label class="label">Carbs (g)</label><input id="nt-rest-carbs" type="number" placeholder="e.g. 180"/></div>
+      <div><label class="label">Fat (g)</label><input id="nt-rest-fat" type="number" placeholder="e.g. 65"/></div>
+    </div>
+    <button class="btn-primary" onclick="saveNutritionTargets()">Save Targets</button>
+  </div>
+</div>
+
 </body>
 </html>

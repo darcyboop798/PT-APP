@@ -18,6 +18,7 @@
   --text:#eeeef5;--muted:#5a5a7a;--muted2:#3a3a55;--purple:#a78bfa;
 }
 body{background:var(--bg);color:var(--text);font-family:'Nunito',sans-serif;max-width:430px;margin:0 auto;min-height:100vh;overflow-x:hidden;}
+.safe-top{padding-top:max(48px,env(safe-area-inset-top,48px));}
 ::-webkit-scrollbar{display:none;}
 input,select,textarea{font-family:'Nunito',sans-serif;background:var(--bg);border:1.5px solid var(--border);border-radius:12px;padding:12px 14px;color:var(--text);font-size:15px;width:100%;outline:none;}
 input::placeholder,textarea::placeholder{color:var(--muted2);}
@@ -64,7 +65,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- HOME SCREEN -->
 <div id="screen-home" class="screen">
-  <div style="padding:28px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <div class="row" style="margin-bottom:6px">
       <div>
         <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase">Darcy's PT</div>
@@ -73,26 +74,31 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
       <button id="btn-add-client" style="background:var(--accent);color:#050510;border:none;border-radius:50%;width:44px;height:44px;font-size:24px;font-weight:800">+</button>
     </div>
     <div id="home-stats" class="grid2" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px"></div>
-    <!-- AI Insights -->
     <div id="ai-insights-card" style="margin-bottom:16px"></div>
-    <!-- Unread messages -->
     <div id="unread-messages-card" style="margin-bottom:16px"></div>
-    <!-- Upcoming bookings -->
     <div id="upcoming-bookings-card" style="margin-bottom:16px"></div>
+    <div style="display:flex;gap:8px;margin-bottom:16px">
+      <button onclick="showScreen('revenue');loadRevenue()" style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:12px;font-weight:700;color:var(--gold)">💰 Revenue</button>
+      <button onclick="showScreen('referrals');loadReferrals()" style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:12px;font-weight:700;color:var(--purple)">🎁 Referrals</button>
+      <button onclick="showScreen('bookings');loadBookings()" style="flex:1;background:var(--card);border:1px solid var(--border);border-radius:12px;padding:12px;font-size:12px;font-weight:700;color:var(--green)">📅 Bookings</button>
+    </div>
   </div>
   <div id="client-list" style="padding:0 20px;display:flex;flex-direction:column;gap:12px"></div>
 </div>
 
 <!-- CLIENT SCREEN -->
 <div id="screen-client" class="screen">
-  <div style="padding:20px 20px 0;background:var(--bg)">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0;background:var(--bg)">
     <button id="btn-back-home" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:14px;display:flex;align-items:center;gap:6px">← All Clients</button>
     <div class="row" style="margin-bottom:10px">
       <div style="display:flex;align-items:center;gap:14px;flex:1">
         <div id="client-avatar-big" style="width:58px;height:58px;border-radius:18px;display:flex;align-items:center;justify-content:center;font-size:20px;font-weight:800;flex-shrink:0"></div>
         <div><div id="client-name-big" class="syne" style="font-size:22px;font-weight:800"></div><div id="client-meta-big" style="font-size:13px;color:var(--muted)"></div></div>
       </div>
-      <button id="btn-msg-client" class="btn-tag" style="font-size:12px">💬</button>
+      <div style="display:flex;gap:6px">
+        <button onclick="generatePDFReport()" class="btn-tag" style="font-size:11px">📄 PDF</button>
+        <button id="btn-msg-client" class="btn-tag" style="font-size:12px">💬</button>
+      </div>
     </div>
     <div class="tabs" id="client-tabs"></div>
   </div>
@@ -101,7 +107,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- BOOKINGS SCREEN -->
 <div id="screen-bookings" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <button onclick="showScreen('home')" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:14px">← Back</button>
     <div class="syne" style="font-size:26px;font-weight:800;margin-bottom:20px">📅 Bookings</div>
     <div id="bookings-body"></div>
@@ -110,7 +116,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- MESSAGES SCREEN -->
 <div id="screen-messages" class="screen">
-  <div style="padding:24px 20px 0">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
     <button onclick="showScreen('home')" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:14px">← Back</button>
     <div class="syne" style="font-size:26px;font-weight:800;margin-bottom:20px">💬 Messages</div>
     <div id="messages-body"></div>
@@ -119,8 +125,8 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 
 <!-- PROGRAM EDITOR SCREEN -->
 <div id="screen-program" class="screen">
-  <div style="padding:0 20px 14px;background:var(--bg);border-bottom:1px solid var(--border)">
-    <button id="btn-back-client-prog" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px;padding-top:14px">← Back</button>
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 14px;background:var(--bg);border-bottom:1px solid var(--border)">
+    <button id="btn-back-client-prog" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px">← Back</button>
     <div class="row">
       <div>
         <div style="font-size:11px;color:var(--muted);letter-spacing:2px;text-transform:uppercase">Program Editor</div>
@@ -130,6 +136,26 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
     </div>
   </div>
   <div id="program-editor-body" style="padding:16px 20px 0"></div>
+</div>
+
+
+<!-- REVENUE SCREEN -->
+<div id="screen-revenue" class="screen">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
+    <button onclick="showScreen('home')" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:14px">← Back</button>
+    <div class="syne" style="font-size:26px;font-weight:800;margin-bottom:4px">💰 Revenue</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Stripe dashboard — connect Stripe to activate</div>
+    <div id="revenue-body"></div>
+  </div>
+</div>
+
+<!-- REFERRALS SCREEN -->
+<div id="screen-referrals" class="screen">
+  <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 0">
+    <button onclick="showScreen('home')" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:14px">← Back</button>
+    <div class="syne" style="font-size:26px;font-weight:800;margin-bottom:20px">🎁 Referrals</div>
+    <div id="referrals-body"></div>
+  </div>
 </div>
 
 <!-- MODALS -->
@@ -247,7 +273,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
     <div class="modal-handle"></div>
     <div class="syne" style="font-size:20px;font-weight:800;margin-bottom:16px">Set Availability</div>
     <div id="availability-body"></div>
-    <button class="btn-primary" style="margin-top:16px" onclick="saveAvailability()">Save Availability</button>
+    <button class="btn-primary" style="margin-top:16px" onclick="saveAvailabilityFull()">Save Availability</button>
   </div>
 </div>
 
@@ -520,7 +546,7 @@ async function renderWorkoutsTab(){
     </div>`).join('')}
   </div>`).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No sessions logged yet.</div>`;
   document.getElementById('client-tab-content').innerHTML=`
-    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${sessions.length} sessions</span></div>
+    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${sessions.length} sessions</span><button class="btn-tag" style="font-size:11px" onclick="openProgressionSuggestions()">🤖 AI Progression</button></div>
     ${pbCard}${charts}
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Session Log</div>${log}`;
 }
@@ -723,7 +749,7 @@ async function renderProgramTab(){
   </div>`).join('')||`<div style="text-align:center;color:var(--muted);padding:20px 0">No programs yet.</div>`;
   const templateList=templates&&templates.length?`<div style="margin-top:20px"><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Templates</div>${templates.map(t=>`<div class="card2" style="margin-bottom:8px;display:flex;justify-content:space-between;align-items:center"><span style="font-size:14px;font-weight:700">${t.name}</span><button onclick="useTemplate('${t.id}')" class="btn-tag" style="font-size:12px">Use Template</button></div>`).join('')}</div>`:'';
   document.getElementById('client-tab-content').innerHTML=`
-    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${(progs||[]).length} programs</span><button class="btn-tag" onclick="openModal('addProgram')">+ New Program</button></div>
+    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${(progs||[]).length} programs</span><div style="display:flex;gap:6px"><button class="btn-tag" style="font-size:11px" onclick="openImportModal()">📥 Import</button><button class="btn-tag" onclick="openModal('addProgram')">+ New</button></div></div>
     ${progList}${templateList}`;
 }
 
@@ -775,7 +801,10 @@ async function markVideoReviewed(id){
 async function openProgramEditor(progId){
   const {data:prog}=await sb.from('programs').select('*').eq('id',progId).single();
   const {data:weeks}=await sb.from('program_weeks').select('*,program_days(*,program_exercises(*))').eq('program_id',progId).order('week_num');
-  editProg={...prog,weeks:(weeks||[]).map(w=>({...w,days:(w.program_days||[]).map(d=>({...d,exercises:d.program_exercises||[]}))}))};
+  const mappedWeeks=(weeks||[]).map(w=>({...w,days:(w.program_days||[]).sort((a,b)=>a.order_index-b.order_index).map(d=>({...d,exercises:(d.program_exercises||[]).sort((a,b)=>a.order_index-b.order_index)}))}));
+  // If no weeks yet, start with one empty week
+  if(!mappedWeeks.length) mappedWeeks.push({week_num:1,days:[{day_label:'Day 1',exercises:[{name:'',sets:'',reps:'',weight:'',rpe:'',notes:''}]}]});
+  editProg={...prog,weeks:mappedWeeks};
   document.getElementById('prog-editor-name').textContent=editProg.name;
   renderProgramEditorBody();
   showScreen('program');
@@ -946,7 +975,7 @@ async function loadBookings(){
   const confirmed=(bookings||[]).filter(b=>b.status==='confirmed');
   document.getElementById('bookings-body').innerHTML=`
     <div style="display:flex;gap:8px;margin-bottom:16px">
-      <button class="btn-tag" onclick="openModal('availability')">Set Availability</button>
+      <button class="btn-tag" onclick="openAvailabilityModal()">Set Availability</button>
     </div>
     ${pending.length?`<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Pending (${pending.length})</div>
     ${pending.map(b=>`<div class="card" style="margin-bottom:10px;border-color:rgba(255,209,102,.3)">
@@ -974,6 +1003,324 @@ async function updateBooking(id,status){
 async function saveAvailability(){
   toast('Availability saved!');
   closeModal('availability');
+}
+
+
+
+// ─── AVAILABILITY ────────────────────────────────────────────────────────────
+const DAYS = ['Mon','Tue','Wed','Thu','Fri','Sat','Sun'];
+let availState = {Mon:{on:true,start:'06:00',end:'20:00'},Tue:{on:true,start:'06:00',end:'20:00'},Wed:{on:true,start:'06:00',end:'20:00'},Thu:{on:true,start:'06:00',end:'20:00'},Fri:{on:true,start:'06:00',end:'20:00'},Sat:{on:false,start:'08:00',end:'14:00'},Sun:{on:false,start:'08:00',end:'14:00'}};
+
+function openAvailabilityModal(){
+  const grid=document.getElementById('avail-days-grid');
+  grid.innerHTML=DAYS.map(d=>`
+    <div style="display:flex;align-items:center;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)">
+      <div style="width:36px;font-weight:800;font-size:14px">${d}</div>
+      <label style="display:flex;align-items:center;gap:6px;cursor:pointer">
+        <input type="checkbox" id="avail-on-${d}" ${availState[d]?.on?'checked':''} onchange="availState['${d}'].on=this.checked;renderAvailRow('${d}')"/>
+        <span style="font-size:12px;color:var(--muted)">Available</span>
+      </label>
+      <div id="avail-times-${d}" style="display:flex;gap:6px;margin-left:auto;${availState[d]?.on?'':'opacity:.3;pointer-events:none'}">
+        <input type="time" id="avail-start-${d}" value="${availState[d]?.start||'06:00'}" oninput="availState['${d}'].start=this.value" style="width:90px;padding:6px 8px;font-size:12px"/>
+        <span style="font-size:12px;color:var(--muted);align-self:center">to</span>
+        <input type="time" id="avail-end-${d}" value="${availState[d]?.end||'20:00'}" oninput="availState['${d}'].end=this.value" style="width:90px;padding:6px 8px;font-size:12px"/>
+      </div>
+    </div>`).join('');
+  openModal('setAvailability');
+}
+
+function renderAvailRow(d){
+  const on=availState[d]?.on;
+  const el=document.getElementById('avail-times-'+d);
+  if(el) el.style.cssText=`display:flex;gap:6px;margin-left:auto;${on?'':'opacity:.3;pointer-events:none'}`;
+}
+
+async function saveAvailabilityFull(){
+  await sb.from('availability').delete().neq('id','00000000-0000-0000-0000-000000000000');
+  const rows=DAYS.filter(d=>availState[d]?.on).map((d,i)=>({
+    day_of_week:['Mon','Tue','Wed','Thu','Fri','Sat','Sun'].indexOf(d)+1,
+    start_time:availState[d].start,
+    end_time:availState[d].end,
+    slot_duration_mins:+document.getElementById('avail-duration').value||60,
+    active:true
+  }));
+  if(rows.length) await sb.from('availability').insert(rows);
+  closeModal('setAvailability');
+  toast('Availability saved!');
+}
+
+// ─── REVENUE DASHBOARD ────────────────────────────────────────────────────────
+async function loadRevenue(){
+  const {data:subs}=await sb.from('subscriptions').select('*,clients(name,color,avatar)').order('created_at',{ascending:false});
+  const active=(subs||[]).filter(s=>s.status==='active');
+  const mrr=active.reduce((sum,s)=>sum+(+s.amount||0),0);
+  const {data:allClients}=await sb.from('clients').select('*');
+  document.getElementById('revenue-body').innerHTML=`
+    <div style="background:linear-gradient(135deg,#0a1f0a,#070710);border:1px solid rgba(6,214,160,.3);border-radius:16px;padding:20px;margin-bottom:20px;text-align:center">
+      <div style="font-size:11px;color:var(--green);text-transform:uppercase;letter-spacing:2px;margin-bottom:6px">Monthly Recurring Revenue</div>
+      <div class="syne" style="font-size:48px;font-weight:800;color:var(--green)">A$${mrr.toFixed(0)}</div>
+      <div style="font-size:13px;color:var(--muted);margin-top:4px">${active.length} active subscriptions</div>
+    </div>
+    <div class="grid2" style="grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:20px">
+      <div class="card" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--accent)">${(allClients||[]).length}</div><div style="font-size:11px;color:var(--muted)">Total Clients</div></div>
+      <div class="card" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--green)">${active.length}</div><div style="font-size:11px;color:var(--muted)">Active</div></div>
+      <div class="card" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--red)">${(allClients||[]).length-active.length}</div><div style="font-size:11px;color:var(--muted)">Lapsed</div></div>
+    </div>
+    <div style="background:var(--card);border-radius:14px;border:1px solid rgba(255,209,102,.2);padding:14px;margin-bottom:16px">
+      <div style="font-size:12px;color:var(--gold);font-weight:800;margin-bottom:10px">⚡ Connect Stripe</div>
+      <div style="font-size:13px;color:var(--muted);margin-bottom:12px">Wire up real payments so clients pay monthly and access is auto-managed.</div>
+      <button onclick="toast('Stripe setup coming soon — ask Darcy\'s PT dev!')" class="btn-primary" style="background:var(--gold);font-size:14px;padding:12px">Connect Stripe Account</button>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">All Subscriptions</div>
+    ${(subs||[]).map(s=>`<div class="card" style="margin-bottom:10px;display:flex;align-items:center;gap:12px">
+      <div style="width:40px;height:40px;border-radius:12px;background:${s.clients?.color||'#6ee7ff'}22;border:2px solid ${s.clients?.color||'#6ee7ff'};display:flex;align-items:center;justify-content:center;font-weight:800;color:${s.clients?.color||'#6ee7ff'};font-size:14px;flex-shrink:0">${s.clients?.avatar||'?'}</div>
+      <div style="flex:1"><div style="font-weight:800;font-size:14px">${s.clients?.name||'Unknown'}</div><div style="font-size:11px;color:var(--muted);margin-top:2px">${s.plan||'Monthly'} · A$${s.amount||0}/mo</div></div>
+      <span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;background:${s.status==='active'?'rgba(6,214,160,.15)':'rgba(90,90,122,.2)'};color:${s.status==='active'?'var(--green)':'var(--muted)'}">${s.status}</span>
+    </div>`).join('')||'<div style="text-align:center;color:var(--muted);padding:20px 0">No subscriptions yet — connect Stripe to get started.</div>'}`;
+}
+
+// ─── REFERRALS ────────────────────────────────────────────────────────────────
+async function loadReferrals(){
+  const {data:refs}=await sb.from('referrals').select('*,referrer:referrer_id(name,avatar,color),referred:referred_id(name,avatar,color)').order('created_at',{ascending:false});
+  const {data:clients2}=await sb.from('clients').select('*');
+  document.getElementById('referrals-body').innerHTML=`
+    <div class="card" style="margin-bottom:16px;border-color:rgba(167,139,250,.3)">
+      <div style="font-size:12px;color:var(--purple);font-weight:800;margin-bottom:8px">How it works</div>
+      <div style="font-size:13px;color:var(--muted);line-height:1.7">Each client has a unique referral code. When they refer someone who signs up, track it here and offer a discount month as a reward. Coming soon: auto-discounts via Stripe.</div>
+    </div>
+    <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:12px">Client Referral Codes</div>
+    ${(clients2||[]).map(c=>`<div class="card" style="margin-bottom:10px">
+      <div class="row">
+        <div style="display:flex;align-items:center;gap:10px">
+          <div style="width:36px;height:36px;border-radius:10px;background:${c.color||'#6ee7ff'}22;border:2px solid ${c.color||'#6ee7ff'};display:flex;align-items:center;justify-content:center;font-weight:800;color:${c.color||'#6ee7ff'};font-size:12px">${c.avatar||'?'}</div>
+          <span style="font-weight:700">${c.name}</span>
+        </div>
+        <code style="font-size:14px;font-weight:800;color:var(--purple);background:rgba(167,139,250,.1);padding:4px 10px;border-radius:8px">${c.referral_code||'—'}</code>
+      </div>
+    </div>`).join('')}
+    ${refs&&refs.length?`<div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-top:20px;margin-bottom:12px">Referral History</div>${refs.map(r=>`<div class="card" style="margin-bottom:10px"><div class="row"><div><span style="font-weight:700">${r.referrer?.name||'?'}</span><span style="color:var(--muted)"> referred </span><span style="font-weight:700">${r.referred?.name||'?'}</span></div><span style="font-size:11px;padding:4px 10px;border-radius:20px;font-weight:700;background:${r.discount_applied?'rgba(6,214,160,.15)':'rgba(255,209,102,.12)'};color:${r.discount_applied?'var(--green)':'var(--gold)'}">${r.discount_applied?'Rewarded':'Pending'}</span></div></div>`).join('')}`:''}`;
+}
+
+// ─── PROGRAM IMPORT ──────────────────────────────────────────────────────────
+function openImportModal(){
+  openModal('importProgram');
+}
+
+async function importProgram(){
+  const statusEl=document.getElementById('import-status');
+  const name=document.getElementById('inp-import-prog-name').value.trim();
+  if(!name){statusEl.style.display='block';statusEl.style.color='var(--red)';statusEl.textContent='Please enter a program name.';return;}
+  
+  let rawData='';
+  const file=document.getElementById('inp-import-file').files[0];
+  const pastedData=document.getElementById('inp-import-data').value.trim();
+  
+  if(file){
+    rawData=await new Promise(res=>{const r=new FileReader();r.onload=e=>res(e.target.result);r.readAsText(file);});
+  } else if(pastedData){
+    rawData=pastedData;
+  } else {
+    statusEl.style.display='block';statusEl.style.color='var(--red)';statusEl.textContent='Please paste data or upload a file.';return;
+  }
+  
+  statusEl.style.display='block';statusEl.style.color='var(--muted)';statusEl.textContent='Processing…';
+  
+  // Use AI to parse the program data
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:3000,
+      messages:[{role:'user',content:`Parse this fitness program data into structured JSON. The data may be tab-separated, comma-separated, or in any format from Google Sheets or Excel.
+
+Data:
+${rawData.slice(0,3000)}
+
+Return ONLY a JSON object like this:
+{
+  "weeks": [
+    {
+      "week_num": 1,
+      "days": [
+        {
+          "day_label": "Monday",
+          "exercises": [
+            {"name": "Squat", "sets": 4, "reps": 5, "weight": 100, "rpe": 8, "notes": "Keep chest up"}
+          ]
+        }
+      ]
+    }
+  ]
+}
+
+Rules:
+- Group exercises by day and week
+- If no week info, assume Week 1
+- If no day info, group all into Day 1
+- sets/reps/weight/rpe should be numbers or null
+- Return ONLY the JSON, no other text`}]
+    })});
+    const data=await res.json();
+    const parsed=JSON.parse(data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    
+    // Create program in DB
+    const {data:prog}=await sb.from('programs').insert({client_id:selClientId,name,is_template:false}).select().single();
+    for(const week of parsed.weeks||[]){
+      const {data:newWeek}=await sb.from('program_weeks').insert({program_id:prog.id,week_num:week.week_num}).select().single();
+      for(let di=0;di<(week.days||[]).length;di++){
+        const day=week.days[di];
+        const {data:newDay}=await sb.from('program_days').insert({week_id:newWeek.id,day_label:day.day_label,order_index:di}).select().single();
+        for(let ei=0;ei<(day.exercises||[]).length;ei++){
+          const ex=day.exercises[ei];
+          if(!ex.name) continue;
+          await sb.from('program_exercises').insert({day_id:newDay.id,name:ex.name,sets:ex.sets||null,reps:ex.reps||null,weight:ex.weight||null,rpe:ex.rpe||null,notes:ex.notes||null,order_index:ei});
+        }
+      }
+    }
+    
+    statusEl.style.color='var(--green)';
+    statusEl.textContent=`✓ Imported ${parsed.weeks?.length||0} weeks successfully!`;
+    document.getElementById('inp-import-data').value='';
+    document.getElementById('inp-import-prog-name').value='';
+    setTimeout(()=>{closeModal('importProgram');setTab('program');},1500);
+  } catch(e){
+    statusEl.style.color='var(--red)';
+    statusEl.textContent='Could not parse data. Check format and try again.';
+  }
+}
+
+// ─── AI PROGRAMME PROGRESSION ─────────────────────────────────────────────────
+let progressionSuggestions = [];
+
+async function openProgressionSuggestions(){
+  const c=selClient();
+  document.getElementById('prog-suggestion-client').textContent=c.name;
+  document.getElementById('prog-suggestions-body').innerHTML='<div style="text-align:center;padding:20px;color:var(--muted)">Analysing recent sessions…</div>';
+  openModal('progressionSuggestions');
+  
+  const {data:sessions}=await sb.from('workouts').select('*,workout_exercises(*)').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(6);
+  const {data:progs}=await sb.from('programs').select('*').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(1);
+  
+  if(!sessions||sessions.length<2){
+    document.getElementById('prog-suggestions-body').innerHTML='<div style="text-align:center;color:var(--muted);padding:16px">Need at least 2 logged sessions to generate suggestions.</div>';
+    return;
+  }
+  
+  try {
+    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({
+      model:'claude-sonnet-4-20250514',max_tokens:1000,
+      messages:[{role:'user',content:`You are an expert strength & conditioning coach. Analyse these recent workout sessions and suggest next week's weights/reps for progressive overload.
+
+Client: ${c.name}, Goal: ${c.goal}
+Recent sessions: ${JSON.stringify(sessions.slice(0,4).map(s=>({date:s.date,exercises:s.workout_exercises})))}
+
+Return ONLY a JSON array of suggestions:
+[
+  {"exercise": "Squat", "current_weight": 100, "current_reps": 5, "suggested_weight": 102.5, "suggested_reps": 5, "reason": "Completed all reps at RPE 7 — increase by 2.5kg"},
+  ...
+]
+Max 6 suggestions. Focus on main compound lifts. Only suggest if confident based on data.`}]
+    })});
+    const data=await res.json();
+    progressionSuggestions=JSON.parse(data.content[0].text.replace(/\`\`\`json|\`\`\`/g,'').trim());
+    
+    document.getElementById('prog-suggestions-body').innerHTML=progressionSuggestions.map((s,i)=>`
+      <div class="card2" style="margin-bottom:10px">
+        <div style="font-weight:800;font-size:15px;margin-bottom:6px">${s.exercise}</div>
+        <div class="row" style="margin-bottom:6px">
+          <div style="text-align:center;flex:1">
+            <div style="font-size:11px;color:var(--muted);margin-bottom:2px">Current</div>
+            <div style="font-size:16px;font-weight:800">${s.current_weight}kg × ${s.current_reps}</div>
+          </div>
+          <div style="font-size:20px;color:var(--muted)">→</div>
+          <div style="text-align:center;flex:1">
+            <div style="font-size:11px;color:var(--green);margin-bottom:2px">Suggested</div>
+            <div style="font-size:16px;font-weight:800;color:var(--green)">${s.suggested_weight}kg × ${s.suggested_reps}</div>
+          </div>
+        </div>
+        <div style="font-size:12px;color:var(--muted);font-style:italic">${s.reason}</div>
+      </div>`).join('')||'<div style="color:var(--muted);text-align:center;padding:16px">Not enough consistent data to suggest progressions yet.</div>';
+  } catch(e){
+    document.getElementById('prog-suggestions-body').innerHTML='<div style="color:var(--red);text-align:center;padding:16px">Error generating suggestions — try again.</div>';
+  }
+}
+
+async function applyProgressionSuggestions(){
+  if(!progressionSuggestions.length) return;
+  // Find active program and update exercise weights
+  const {data:progs}=await sb.from('programs').select('*').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(1);
+  if(!progs||!progs.length){toast('No active program to update','var(--red)');return;}
+  const {data:exercises}=await sb.from('program_exercises').select('*,program_days(week_id)').eq('program_days.program_weeks.program_id',progs[0].id);
+  
+  // Update each suggested exercise
+  for(const sug of progressionSuggestions){
+    const {data:exs}=await sb.from('program_exercises').select('*,program_days!inner(program_weeks!inner(program_id))').eq('name',sug.exercise).eq('program_days.program_weeks.program_id',progs[0].id);
+    if(exs&&exs.length){
+      await sb.from('program_exercises').update({weight:sug.suggested_weight,reps:sug.suggested_reps}).eq('id',exs[exs.length-1].id);
+    }
+  }
+  closeModal('progressionSuggestions');
+  toast('Programme updated with progressions! ✓');
+}
+
+// ─── PDF PROGRESS REPORT ─────────────────────────────────────────────────────
+async function generatePDFReport(){
+  const c=selClient();
+  const {data:weights}=await sb.from('weights').select('*').eq('client_id',selClientId).order('created_at',{ascending:true});
+  const {data:sessions}=await sb.from('workouts').select('*,workout_exercises(*)').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(10);
+  const {data:pbs}=await sb.from('personal_bests').select('*').eq('client_id',selClientId);
+  const {data:checkins}=await sb.from('checkins').select('*').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(4);
+  
+  const latW=weights&&weights[weights.length-1];
+  const startW=weights&&weights[0];
+  const change=startW&&latW?(latW.val-startW.val).toFixed(1):0;
+  const today=new Date().toLocaleDateString('en-GB',{day:'numeric',month:'long',year:'numeric'});
+  
+  const html=`<!DOCTYPE html><html><head><style>
+    *{margin:0;padding:0;box-sizing:border-box;}
+    body{font-family:Arial,sans-serif;color:#111;background:#fff;padding:40px;max-width:800px;margin:0 auto;}
+    h1{font-size:28px;font-weight:900;color:#111;margin-bottom:4px;}
+    h2{font-size:16px;font-weight:700;color:#444;margin:24px 0 12px;}
+    .header{border-bottom:3px solid #111;padding-bottom:16px;margin-bottom:24px;}
+    .subtitle{font-size:13px;color:#666;margin-top:4px;}
+    .stat-row{display:flex;gap:16px;margin-bottom:20px;}
+    .stat{flex:1;background:#f5f5f5;border-radius:10px;padding:14px;text-align:center;}
+    .stat-val{font-size:26px;font-weight:900;margin-bottom:2px;}
+    .stat-lbl{font-size:11px;color:#666;text-transform:uppercase;letter-spacing:1px;}
+    .pb-row{display:flex;justify-content:space-between;padding:8px 0;border-bottom:1px solid #eee;font-size:14px;}
+    .session{background:#f9f9f9;border-radius:8px;padding:12px;margin-bottom:10px;}
+    .session-date{font-size:12px;color:#666;margin-bottom:6px;}
+    .ex-row{display:flex;justify-content:space-between;font-size:13px;padding:3px 0;}
+    .checkin{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:10px;}
+    .ci-item{background:#f0f0f0;border-radius:6px;padding:6px 12px;font-size:12px;}
+    .footer{margin-top:32px;padding-top:16px;border-top:1px solid #eee;font-size:11px;color:#999;text-align:center;}
+    @media print{body{padding:20px;}}
+  </style></head><body>
+  <div class="header">
+    <h1>${c.name}'s Progress Report</h1>
+    <div class="subtitle">Darcy's PT · Newcastle · Generated ${today}</div>
+    <div class="subtitle" style="margin-top:4px">Goal: ${c.goal||'—'} · Client since ${c.since||'—'}</div>
+  </div>
+  
+  <h2>Weight Progress</h2>
+  <div class="stat-row">
+    <div class="stat"><div class="stat-val">${startW?startW.val+'kg':'—'}</div><div class="stat-lbl">Starting Weight</div></div>
+    <div class="stat"><div class="stat-val">${latW?latW.val+'kg':'—'}</div><div class="stat-lbl">Current Weight</div></div>
+    <div class="stat" style="background:${change<=0?'#e8faf5':'#fef0f2'}"><div class="stat-val" style="color:${change<=0?'#06d6a0':'#ef476f'}">${change>0?'+':''}${change}kg</div><div class="stat-lbl">Total Change</div></div>
+    <div class="stat"><div class="stat-val">${sessions?sessions.length:0}</div><div class="stat-lbl">Sessions</div></div>
+  </div>
+  
+  ${pbs&&pbs.length?`<h2>Personal Bests</h2>${pbs.map(pb=>`<div class="pb-row"><span>${pb.exercise}</span><strong>${pb.weight}kg × ${pb.reps} reps</strong></div>`).join('')}`:''}
+  
+  ${checkins&&checkins.length?`<h2>Recent Check-ins</h2>${checkins.map(ci=>`<div class="checkin"><div class="ci-item">📅 ${ci.date}</div><div class="ci-item">😴 Sleep ${ci.sleep_quality}/10</div><div class="ci-item">⚡ Energy ${ci.energy}/10</div><div class="ci-item">😰 Stress ${ci.stress}/10</div><div class="ci-item">🔥 Motivation ${ci.motivation}/10</div></div>`).join('')}`:''}
+  
+  ${sessions&&sessions.length?`<h2>Recent Sessions</h2>${sessions.slice(0,5).map(s=>`<div class="session"><div class="session-date">${s.date}${s.day_label?' · '+s.day_label:''}</div>${(s.workout_exercises||[]).map(ex=>`<div class="ex-row"><span>${ex.name}</span><span>${ex.sets}×${ex.reps}${ex.weight?' @ '+ex.weight+'kg':''}</span></div>`).join('')}</div>`).join('')}`:''}
+  
+  <div class="footer">Generated by Darcy's PT · ptappdj.netlify.app · Newcastle, NSW</div>
+  </body></html>`;
+  
+  const win=window.open('','_blank');
+  win.document.write(html);
+  win.document.close();
+  setTimeout(()=>win.print(),500);
 }
 
 // ─── MONTH SELECT ─────────────────────────────────────────────────────────────
@@ -1007,5 +1354,49 @@ window.doLogin=function(){
   if(authed) sessionStorage.setItem('pt-authed','1');
 };
 </script>
+
+<div id="modal-importProgram" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="syne" style="font-size:20px;font-weight:800;margin-bottom:6px">Import Program</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Paste from Google Sheets or Excel. Each row = one exercise. Columns: Exercise | Sets | Reps | Weight | RPE | Notes | Day | Week</div>
+    <label class="label">Paste your data here</label>
+    <textarea id="inp-import-data" placeholder="Squat&#9;4&#9;5&#9;100&#9;8&#9;Keep chest up&#9;Monday&#9;1&#10;Bench Press&#9;4&#9;8&#9;80&#9;7&#9;Retract scapula&#9;Monday&#9;1&#10;..." style="height:160px;resize:none;font-size:12px;font-family:monospace;margin-bottom:12px"></textarea>
+    <label class="label">Or upload Excel / CSV file</label>
+    <input type="file" id="inp-import-file" accept=".csv,.xlsx,.xls,.tsv" style="margin-bottom:16px"/>
+    <label class="label">Program name</label>
+    <input id="inp-import-prog-name" placeholder="e.g. Phase 2 – Strength Block" style="margin-bottom:20px"/>
+    <button class="btn-primary" onclick="importProgram()">Import Program</button>
+    <div id="import-status" style="font-size:13px;margin-top:12px;text-align:center;display:none"></div>
+  </div>
+</div>
+
+<div id="modal-progressionSuggestions" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="syne" style="font-size:20px;font-weight:800;margin-bottom:4px">🤖 AI Progression</div>
+    <div id="prog-suggestion-client" style="font-size:13px;color:var(--accent);margin-bottom:16px"></div>
+    <div id="prog-suggestions-body" style="margin-bottom:20px"></div>
+    <button class="btn-primary" onclick="applyProgressionSuggestions()">Apply All Suggestions ✓</button>
+  </div>
+</div>
+
+<div id="modal-setAvailability" class="modal-overlay">
+  <div class="modal-sheet">
+    <div class="modal-handle"></div>
+    <div class="syne" style="font-size:20px;font-weight:800;margin-bottom:16px">📅 Set Availability</div>
+    <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Set which days and hours you're available for bookings.</div>
+    <div id="avail-days-grid"></div>
+    <label class="label" style="margin-top:16px">Session Duration</label>
+    <select id="avail-duration" style="margin-bottom:20px;appearance:none">
+      <option value="30">30 minutes</option>
+      <option value="45">45 minutes</option>
+      <option value="60" selected>60 minutes</option>
+      <option value="90">90 minutes</option>
+    </select>
+    <button class="btn-primary" onclick="saveAvailabilityFull()">Save Availability</button>
+  </div>
+</div>
+
 </body>
 </html>
