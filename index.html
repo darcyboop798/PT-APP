@@ -27,6 +27,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 .syne{font-family:'Syne',sans-serif;}
 .screen{display:none;padding-bottom:60px;}
 .screen.active{display:block;}
+.screen-chat-inner.active{display:flex;flex-direction:column;height:100vh;}
 .card{background:var(--card);border-radius:16px;border:1px solid var(--border);padding:16px;}
 .card2{background:var(--card2);border-radius:12px;padding:12px 14px;}
 .btn-primary{width:100%;background:var(--accent);color:#050510;border:none;border-radius:14px;padding:16px;font-size:16px;font-weight:800;font-family:'Syne',sans-serif;}
@@ -132,9 +133,9 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 </div>
 
 <!-- CHAT THREAD SCREEN -->
-<div id="screen-chat" class="screen" style="padding-bottom:0;height:100vh;display:flex;flex-direction:column;">
+<div id="screen-chat" class="screen screen-chat-inner" style="padding-bottom:0;">
   <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 14px;background:var(--bg);border-bottom:1px solid var(--border);flex-shrink:0">
-    <button onclick="showScreen('messages');loadMessages()" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px">← All Messages</button>
+    <button onclick="chatGoBack()" style="background:none;border:none;color:var(--muted);font-size:14px;margin-bottom:10px;display:flex;align-items:center;gap:6px">← All Messages</button>
     <div style="display:flex;align-items:center;gap:12px">
       <div id="chat-avatar" style="width:40px;height:40px;border-radius:12px;display:flex;align-items:center;justify-content:center;font-weight:800;font-size:15px;flex-shrink:0"></div>
       <div><div id="chat-name" class="syne" style="font-size:18px;font-weight:800"></div><div style="font-size:11px;color:var(--muted)">Client</div></div>
@@ -525,7 +526,7 @@ async function loadUnreadMessages(){
   const {data} = await sb.from('messages').select('*,clients(name)').eq('read',false).eq('sender','client').order('created_at',{ascending:false}).limit(5);
   if(!data||!data.length) return;
   document.getElementById('unread-messages-card').innerHTML=`
-    <div class="card" style="border-color:rgba(255,209,102,.3);cursor:pointer" onclick="showScreen('messages');loadMessages()">
+    <div class="card" style="border-color:rgba(255,209,102,.3);cursor:pointer" onclick="chatGoBack()">
       <div class="row">
         <div style="font-size:13px;font-weight:800;color:var(--gold)">💬 ${data.length} Unread Message${data.length>1?'s':''}</div>
         <span style="font-size:12px;color:var(--muted)">View all →</span>
@@ -1041,6 +1042,17 @@ async function deleteCue(id){
   openCues(cueExerciseName);
 }
 
+
+let chatPrevScreen = 'messages';
+function chatGoBack(){
+  if(chatPrevScreen==='client'){
+    showScreen('client');
+  } else {
+    showScreen('messages');
+    loadMessages();
+  }
+}
+
 // ─── MESSAGES ────────────────────────────────────────────────────────────────
 async function loadMessages(){
   const {data:msgs}=await sb.from('messages').select('*,clients(name,color,avatar)').order('created_at',{ascending:false}).limit(100);
@@ -1069,7 +1081,8 @@ async function loadMessages(){
   }).join('')||`<div style="text-align:center;color:var(--muted);padding:40px 0">No messages yet.</div>`;
 }
 
-async function openChatThread(clientId){
+async function openChatThread(clientId, fromScreen="messages"){
+  chatPrevScreen = fromScreen;
   selClientId=clientId;
   const client=clients.find(c=>c.id===clientId)||{};
   // Mark as read
@@ -1500,7 +1513,7 @@ document.getElementById('btn-add-client').onclick=()=>openModal('addClient');
 document.getElementById('btn-back-home').onclick=()=>{showScreen('home');loadHome();};
 document.getElementById('btn-back-client-prog').onclick=()=>{showScreen('client');setTab('program');};
 document.getElementById('btn-save-program').onclick=saveProgramToDB;
-document.getElementById('btn-msg-client').onclick=()=>openChatThread(selClientId);
+document.getElementById('btn-msg-client').onclick=()=>openChatThread(selClientId,'client');
 
 document.querySelectorAll('.modal-overlay').forEach(o=>{
   o.addEventListener('click',e=>{if(e.target===o)o.classList.remove('open');});

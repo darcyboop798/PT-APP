@@ -27,6 +27,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 .bc{font-family:'Barlow Condensed',sans-serif;}
 .screen{display:none;padding-bottom:100px;overflow-x:hidden;width:100%;}
 .screen.active{display:block;}
+.screen-chat-flex.active{display:flex;flex-direction:column;height:100vh;}
 .bottom-nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:430px;background:rgba(13,13,13,0.95);border-top:1px solid var(--border);display:flex;backdrop-filter:blur(12px);z-index:50;padding-bottom:env(safe-area-inset-bottom);}
 .nav-btn{flex:1;display:flex;flex-direction:column;align-items:center;padding:10px 0;gap:3px;background:none;border:none;color:var(--muted);font-size:10px;font-weight:700;text-transform:uppercase;letter-spacing:.8px;}
 .nav-btn.active{color:var(--accent);}
@@ -158,7 +159,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 </div>
 
 <!-- MESSAGES -->
-<div id="screen-msgs" class="screen" style="padding-bottom:0;height:100vh;display:flex;flex-direction:column;">
+<div id="screen-msgs" class="screen screen-chat-flex" style="padding-bottom:0;">
   <div style="padding:max(48px,env(safe-area-inset-top,48px)) 20px 14px;background:var(--bg);border-bottom:1px solid rgba(255,255,255,.06);flex-shrink:0">
     <div style="font-size:11px;color:var(--muted);letter-spacing:3px;text-transform:uppercase;margin-bottom:4px">Messages</div>
     <div style="display:flex;align-items:center;gap:12px">
@@ -356,6 +357,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 </div>
 
 <script>
+
 const { createClient } = supabase;
 const sb = createClient(
   'https://nkzgtzlpwhbpuaislkeo.supabase.co',
@@ -765,31 +767,82 @@ async function renderFood(){
   document.getElementById('food-body').innerHTML=html;
 }
 
-async function aiLookup(){
+
+// ── LOCAL NUTRITION DATABASE ─────────────────────────────────────────────────
+const NDATA={
+'chicken breast':[165,31,0,3.6,0,0.1,1,15,29,1,256,74,0,60],'chicken thigh':[209,26,0,11,0,0.1,1.3,12,25,2.4,220,95,0,150],'chicken drumstick':[172,28,0,6,0,0.1,1.2,12,22,2.1,210,90,0,80],'chicken mince':[143,17,0,8,0,0.1,0.9,10,20,1.5,200,75,0,60],'chicken':[165,31,0,3.6,0,0.1,1,15,29,1,256,74,0,60],'turkey':[189,29,0,7,0,0,1.4,19,28,2.7,302,70,0,80],'turkey mince':[149,22,0,6.5,0,0,1.2,15,23,2,260,65,0,70],'duck':[337,19,0,28,0,0,2.7,11,18,1.9,204,59,0,120],
+'beef':[250,26,0,17,0,0,2.6,18,21,5,318,72,0,40],'beef mince':[254,26,0,17,0,0,2.5,18,20,4.8,270,75,0,40],'lean beef mince':[176,26,0,7.5,0,0,2.5,18,20,4.8,280,70,0,40],'steak':[271,26,0,18,0,0,2.7,19,23,5.1,330,60,0,40],'sirloin':[207,26,0,11,0,0,2.7,20,23,4.9,325,60,0,40],'lamb':[294,25,0,21,0,0,1.9,17,23,3.9,310,72,0,110],'lamb mince':[282,17,0,23,0,0,1.6,14,17,3.1,270,72,0,100],'pork':[242,27,0,14,0,0.7,0.9,19,28,2.9,423,62,0,60],'bacon':[541,37,1.4,42,0,0.3,0.9,13,26,2.8,565,1700,0,50],'ham':[145,21,1.5,5.5,0,0,0.9,7,20,2,380,1300,0,30],'sausage':[301,12,2,27,0,0.3,1,14,15,2.1,270,770,0,50],'kangaroo':[120,22,0,2.8,0,0,3.8,8,22,2.4,398,48,0,70],
+'salmon':[208,20,0,13,0,14,0.3,9,29,0.4,363,59,0,2260],'atlantic salmon':[208,20,0,13,0,14,0.3,9,29,0.4,363,59,0,2260],'tuna':[116,26,0,1,0,4,1,10,35,0.6,400,50,0,240],'tuna can':[116,26,0,1,0,4,1,10,35,0.6,400,300,0,240],'tinned tuna':[116,26,0,1,0,4,1,10,35,0.6,400,300,0,240],'sardines':[208,25,0,11,0,4.8,2.9,382,39,1.3,397,505,0,1480],'cod':[82,18,0,0.7,0,1,0.4,16,32,0.5,413,68,0,170],'barramundi':[100,21,0,1.8,0,3,0.3,17,25,0.5,330,65,0,400],'snapper':[100,21,0,1.3,0,2,0.3,40,37,0.5,480,70,0,320],'prawns':[99,24,0.2,0.3,0,0,0.5,70,37,1.6,259,111,0,540],'shrimp':[99,24,0.2,0.3,0,0,0.5,70,37,1.6,259,111,0,540],'calamari':[92,15.6,3.1,1.4,0,0,0.7,32,33,1.5,246,260,0,400],'crab':[97,19,0,1.5,0,0,0.7,78,42,3.6,329,395,0,480],'oyster':[68,7,3.9,2.5,0,16,5.1,45,22,16.6,156,212,0,370],'mackerel':[205,19,0,14,0,16.1,1.6,12,76,0.6,314,90,0,2600],'trout':[190,21,0,11,0,19,0.5,67,27,0.7,434,58,0,1500],
+'egg':[155,13,1.1,11,0,2,1.8,56,12,1.3,138,124,0,180],'eggs':[155,13,1.1,11,0,2,1.8,56,12,1.3,138,124,0,180],'egg white':[52,11,0.7,0.2,0,0,0.1,7,11,0,163,166,0,0],'egg yolk':[322,16,3.6,27,0,5.4,4.6,129,13,2.3,109,48,0,600],'milk':[61,3.2,4.8,3.3,0,1.2,0.1,113,10,0.4,150,43,0,90],'full cream milk':[61,3.2,4.8,3.3,0,1.2,0.1,113,10,0.4,150,43,0,90],'skim milk':[34,3.4,5,0.1,0,1,0.1,122,11,0.4,166,44,0,10],'greek yogurt':[59,10,3.6,0.4,0,0.6,0.1,110,11,0.5,141,36,0,20],'yogurt':[61,3.5,4.7,3.3,0,0.1,0.1,121,11,0.5,155,46,0,30],'cottage cheese':[98,11,3.4,4.3,0,0.1,0.1,83,8,0.4,104,364,0,30],'ricotta':[174,11,3,13,0,0.2,0.4,207,11,0.5,105,84,0,80],'cheddar':[403,25,1.3,33,0,0.6,0.2,721,28,3.1,98,621,0,300],'cheese':[402,25,1.3,33,0,0.6,0.2,721,28,3.1,98,621,0,300],'parmesan':[431,38,4,29,0,0.5,0.9,1184,44,2.8,125,1529,0,300],'mozzarella':[280,28,2.2,17,0,0.4,0.3,505,20,2.9,76,627,0,200],'feta':[264,14,4,21,0,0.1,0.6,493,19,2.9,62,1116,0,140],'cream cheese':[342,6,4.1,34,0,0.5,0.2,98,9,0.5,138,321,0,380],'butter':[717,0.9,0.1,81,0,0,0,24,2,0.1,24,643,0,450],'cream':[195,1.9,3.5,19,0.5,0.5,0,66,7,0.3,130,41,0,500],'whey protein':[400,80,10,5,0,0,1,600,70,3,500,200,0,0],'protein powder':[400,80,10,5,0,0,1,600,70,3,500,200,0,0],'casein protein':[380,75,12,4,0,0,0.8,580,65,3,420,180,0,0],
+'tofu':[76,8,1.9,4.8,0.1,0,1.6,350,30,0.8,121,7,0.3,400],'firm tofu':[83,9,2,5,0.1,0,1.6,350,30,0.8,121,7,0.3,400],'tempeh':[193,19,9,11,0,0,2.7,111,81,1.7,412,9,5,0],'edamame':[122,11,9.9,5.2,6.1,0,2.3,63,64,1.4,482,6,5.2,0],'lentils':[116,9,20,0.4,1.5,0,3.3,19,36,1.3,369,2,7.9,0],'red lentils':[116,9,20,0.4,1.5,0,3.3,19,36,1.3,369,2,7.9,0],'chickpeas':[164,8.9,27,2.6,1.3,0,2.9,49,48,1.5,291,7,7.6,0],'black beans':[132,8.9,24,0.5,0,0,2.1,27,60,1,355,1,8.7,0],'kidney beans':[127,8.7,22.8,0.5,1.2,0,2.2,28,45,1,403,2,6.4,0],'soybeans':[173,16.6,9.9,9,1.7,0,3.6,102,86,1.2,515,1,6,0],
+'white rice':[130,2.7,28,0.3,0,0,0.2,10,12,0.5,35,1,0.4,0],'brown rice':[123,2.7,26,1,0,0,0.5,10,44,0.6,79,5,1.6,0],'jasmine rice':[130,2.7,28,0.3,0,0,0.2,9,11,0.5,32,1,0.4,0],'basmati rice':[130,2.7,27,0.4,0,0,0.3,11,13,0.5,37,1,0.4,0],'rice':[130,2.7,28,0.3,0,0,0.2,10,12,0.5,35,1,0.4,0],'pasta':[131,5,25,1.1,0,0,1.3,7,18,0.7,44,1,1.8,0],'spaghetti':[131,5,25,1.1,0,0,1.3,7,18,0.7,44,1,1.8,0],'wholemeal pasta':[124,5.3,25,1,0,0,1.5,21,57,1,180,5,3.5,0],'oats':[389,17,66,7,0,0,4.7,54,177,4,429,6,11,0],'rolled oats':[389,17,66,7,0,0,4.7,54,177,4,429,6,11,0],'oatmeal':[71,2.5,12,1.5,0,0,0.8,10,30,0.6,72,50,1.7,0],'porridge':[71,2.5,12,1.5,0,0,0.8,10,30,0.6,72,50,1.7,0],'white bread':[265,9,49,3.2,0,0,3.6,260,26,0.8,115,491,2.7,0],'bread':[265,9,49,3.2,0,0,3.6,260,26,0.8,115,491,2.7,0],'wholegrain bread':[247,13,41,3.5,0,0,3,107,76,1.7,248,428,6,0],'sourdough':[289,9.8,55,1.9,0,0,1.5,24,22,0.7,105,568,2.2,0],'wrap':[290,8,55,4,0,0,2,100,20,0.7,110,490,3,0],'tortilla':[290,8,55,4,0,0,2,100,20,0.7,110,490,3,0],'rice cakes':[392,8,81,3,0,0,0.8,10,40,0.8,150,10,1.5,0],'quinoa':[120,4.4,21,1.9,0,0,1.5,17,64,1.1,172,7,2.8,0],'couscous':[112,3.8,23,0.2,0,0,0.4,8,10,0.3,58,5,1.4,0],'muesli':[363,10,62,6,0.7,0,3.6,43,100,2.3,330,11,6,0],'granola':[471,10,64,20,0.5,0,2.6,44,83,2.2,316,32,5,0],'cornflakes':[357,7,84,0.4,0,0,8,3,6,0.6,37,718,3,0],
+'potato':[77,2,17,0.1,19.7,0,0.8,12,23,0.3,425,6,2.2,0],'sweet potato':[86,1.6,20,0.1,2.4,0,0.6,30,25,0.3,337,55,3,0],'mashed potato':[113,2,17,4.2,7,0,0.3,18,18,0.3,325,350,1.8,0],'yam':[118,1.5,28,0.2,17.1,0,0.5,17,21,0.2,816,9,4,0],
+'broccoli':[34,2.8,7,0.4,89.2,0,0.7,47,21,0.4,316,33,2.6,0],'broccolini':[35,3.5,5.4,0.5,93,0,0.9,55,22,0.4,330,25,2.7,0],'spinach':[23,2.9,3.6,0.4,28.1,0,2.7,99,79,0.5,558,79,2.2,0],'baby spinach':[23,2.9,3.6,0.4,28.1,0,2.7,99,79,0.5,558,79,2.2,0],'kale':[49,4.3,8.8,0.9,120,0,1.5,150,47,0.6,491,38,3.6,0],'lettuce':[15,1.4,2.9,0.2,9.2,0,0.9,36,13,0.2,194,28,1.3,0],'rocket':[25,2.6,3.7,0.7,15,0,1.5,160,47,0.5,369,27,1.6,0],'carrot':[41,0.9,10,0.2,5.9,0,0.3,33,12,0.2,320,69,2.8,0],'tomato':[18,0.9,3.9,0.2,13.7,0,0.3,10,11,0.2,237,5,1.2,0],'cherry tomato':[18,0.9,3.9,0.2,13.7,0,0.3,10,11,0.2,237,5,1.2,0],'cucumber':[16,0.7,3.6,0.1,2.8,0,0.3,16,13,0.2,147,2,0.5,0],'zucchini':[17,1.2,3.1,0.3,17.9,0,0.4,16,18,0.3,261,8,1,0],'capsicum':[31,1,7,0.3,127.7,0,0.4,10,10,0.3,211,4,2.1,0],'red capsicum':[31,1,7,0.3,127.7,0,0.4,10,10,0.3,211,4,2.1,0],'mushroom':[22,3.1,3.3,0.3,2.1,0.2,0.5,3,9,0.5,318,5,1,0],'onion':[40,1.1,9.3,0.1,7.4,0,0.2,23,10,0.2,146,4,1.7,0],'spring onion':[32,1.8,7.3,0.2,19.1,0,1.5,72,20,0.4,276,16,2.6,0],'garlic':[149,6.4,33,0.5,31.2,0,1.7,181,25,1.2,401,17,2.1,0],'celery':[16,0.7,3,0.2,3.1,0,0.2,40,11,0.1,260,80,1.6,0],'asparagus':[20,2.2,3.9,0.1,5.6,0,2.1,24,14,0.5,202,2,2.1,0],'green beans':[31,1.8,7,0.1,12.2,0,1,37,25,0.2,211,6,3.4,0],'peas':[81,5.4,14,0.4,40,0,1.5,25,33,1.2,244,5,5.5,0],'corn':[86,3.2,19,1.2,6.8,0,0.5,2,37,0.5,270,15,2.7,0],'beetroot':[43,1.6,9.6,0.2,4.9,0,0.8,16,23,0.3,325,78,2.8,0],'cauliflower':[25,1.9,5,0.3,48.2,0,0.4,22,15,0.3,299,30,2,0],'eggplant':[25,1,5.9,0.2,2.2,0,0.2,9,14,0.2,229,2,3,0],'pumpkin':[26,1,6.5,0.1,9,0,0.8,21,12,0.2,340,1,0.5,0],'bok choy':[13,1.5,2.2,0.2,45,0,0.7,105,19,0.2,252,65,1,0],'brussels sprouts':[43,3.4,9,0.3,85,0,1.4,42,23,0.4,389,25,3.8,0],'cabbage':[25,1.3,5.8,0.1,36.6,0,0.5,40,12,0.2,170,18,2.5,0],'snow peas':[42,2.8,7.6,0.2,60,0,2.1,43,21,0.3,200,4,2.6,0],'silverbeet':[19,1.8,3.7,0.2,30,0,1.8,51,81,0.4,549,179,1.6,0],
+'banana':[89,1.1,23,0.3,8.7,0,0.3,5,27,0.2,358,1,2.6,0],'apple':[52,0.3,14,0.2,4.6,0,0.1,6,5,0,107,1,2.4,0],'orange':[47,0.9,12,0.1,53.2,0,0.1,40,10,0.1,181,0,2.4,0],'pear':[57,0.4,15,0.1,4.3,0,0.2,9,7,0.1,116,1,3.1,0],'grapes':[69,0.7,18,0.2,10.8,0,0.4,10,7,0.1,191,2,0.9,0],'strawberries':[32,0.7,7.7,0.3,58.8,0,0.4,16,13,0.1,153,1,2,0],'blueberries':[57,0.7,14,0.3,9.7,0,0.3,6,6,0.2,77,1,2.4,0],'raspberries':[52,1.2,12,0.6,26.2,0,0.7,25,22,0.5,151,1,6.5,0],'mango':[60,0.8,15,0.4,36.4,0,0.2,11,10,0.1,168,1,1.6,0],'pineapple':[50,0.5,13,0.1,47.8,0,0.3,13,12,0.1,109,1,1.4,0],'watermelon':[30,0.6,7.6,0.2,8.1,0,0.2,7,10,0.1,112,1,0.4,0],'kiwi':[61,1.1,15,0.5,92.7,0,0.3,34,17,0.1,312,3,3,0],'avocado':[160,2,9,15,10,0,0.6,12,29,0.6,485,7,7,110],'peach':[39,0.9,9.5,0.3,6.6,0,0.3,6,9,0.2,190,0,1.5,0],'plum':[46,0.7,11,0.3,9.5,0,0.2,6,7,0.1,157,0,1.4,0],'cherries':[63,1.1,16,0.2,7,0,0.4,13,11,0.1,222,0,2.1,0],'pomegranate':[83,1.7,19,1.2,10.2,0,0.3,10,12,0.4,236,3,4,0],'dried mango':[314,2.4,79,0.6,12,0,0.5,22,25,0.1,279,4,1.8,0],'raisins':[299,3.1,79,0.5,3.2,0,1.9,50,32,0.2,744,11,3.7,0],'medjool dates':[282,2.5,75,0.4,0,0,1.5,64,54,0.4,696,1,6.7,0],'orange juice':[45,0.7,10,0.2,50,0,0.2,11,11,0.1,200,1,0.2,0],
+'almonds':[579,21,22,50,0,0,3.7,264,270,3.1,733,1,12.5,0],'cashews':[553,18,30,44,0.5,0,6.7,37,292,5.8,660,12,3.3,0],'walnuts':[654,15,14,65,1.3,0,2.9,98,158,3.1,441,2,6.7,2570],'peanuts':[567,26,16,49,0,0,4.6,92,168,3.3,705,18,8.5,0],'peanut butter':[588,25,20,50,0,0,1.9,49,168,2.9,558,472,6,0],'almond butter':[614,21,19,56,0,0,3.5,264,270,3.1,733,6,10,0],'brazil nuts':[659,14,12,67,0.7,0,2.4,160,376,4.1,659,3,7.5,0],'macadamia':[718,8,14,76,1.2,0,3.7,85,130,1.3,368,5,8.6,0],'pistachio':[562,20,28,45,5.6,0,4,105,121,2.3,1025,1,10.3,0],'chia seeds':[486,17,42,31,1.6,0,7.7,631,335,4.6,407,16,34,17550],'flaxseed':[534,18,29,42,0.6,0,5.7,255,392,4.3,813,30,27,22800],'sunflower seeds':[584,21,20,51,1.4,0,5.3,78,325,5,645,9,8.6,5600],'pumpkin seeds':[559,30,11,49,1.9,0,8.8,46,592,7.6,809,7,6,0],'sesame seeds':[573,18,23,50,0,0,14.6,975,351,7.8,468,11,11.8,0],'hemp seeds':[553,32,8.7,49,0.7,0,7.95,70,483,9.9,1200,5,4,8000],
+'olive oil':[884,0,0,100,0,0,0.6,1,0,0,1,2,0,762],'coconut oil':[862,0,0,100,0,0,0,1,0,0,0,0,0,0],'avocado oil':[884,0,0,100,0,0,0,0,0,0,0,0,0,1200],'butter':[717,0.9,0.1,81,0,0,0,24,2,0.1,24,643,0,450],'mayonnaise':[680,1,0.6,75,0,0,0.3,12,2,0.1,20,635,0,3500],'hummus':[166,8,14,10,8.8,0,2.4,49,50,1.5,261,379,6,0],
+'dark chocolate':[598,8,46,43,0,0,11.9,73,228,3.3,715,20,11,0],'honey':[304,0.3,82,0,0.5,0,0.4,6,2,0.2,52,4,0.2,0],'protein bar':[390,30,40,10,0,0,2,200,50,2,300,200,4,0],'muesli bar':[400,6,65,12,0,0,2.5,50,40,1.2,200,120,3.5,0],'vegemite':[185,27,16,0.7,0,0,23.6,118,132,4.5,3564,3600,2.7,0],'popcorn':[387,13,78,4.5,0,0,3.2,7,144,3.1,329,8,14.5,0],
+'water':[0,0,0,0,0,0,0,0,0,0,0,0,0,0],'coffee':[1,0.1,0,0,0,0,0,2,3,0,49,2,0,0],'black coffee':[1,0.1,0,0,0,0,0,2,3,0,49,2,0,0],'green tea':[1,0.2,0,0,0,0,0,0,1,0,8,0,0,0],'coconut water':[19,0.7,3.7,0.2,2.4,0,0.3,24,25,0.1,250,105,1.1,0],'almond milk':[15,0.6,0.6,1.1,0,0.6,0.2,184,7,0.5,67,65,0.3,100],'oat milk':[45,1,6.5,1.5,0,1,0.2,120,12,0.5,53,50,0.8,0],'soy milk':[54,3.3,5.3,1.8,0,1.2,0.3,120,19,0.4,159,51,0.4,240],
+'tomato sauce':[97,1.6,24,0.4,16.3,0,0.9,17,20,0.4,484,907,2.7,0],'soy sauce':[60,5.8,5.6,0,0,0,1.6,20,40,0.4,212,5493,0.1,0],'sriracha':[93,2.5,17,2.2,9,0,0.6,10,10,0.3,155,2200,1.2,0],
+'pizza slice':[266,11,33,10,1,0,2.3,188,21,1.3,172,598,2,200],'burger':[295,17,24,14,1,0,2.6,80,24,2.8,225,396,1.3,120],'fried chicken':[246,22,8,15,0,0,0.9,13,22,1.5,250,400,0.3,100],'sushi roll':[150,5.2,28,1.5,0.5,0,0.3,10,15,0.4,85,320,0.5,50],'sashimi':[130,22,0,4,0,8,0.4,11,30,0.4,380,50,0,1500],'fried rice':[160,4.5,23,5.5,1.2,0,0.5,11,15,0.5,100,420,0.8,30],'scrambled eggs':[149,10,1.8,11,0,1.5,1.6,55,12,1.2,132,300,0,180],'omelette':[154,11,0.7,12,0.4,1.8,1.7,57,11,1.3,138,200,0,180],'smoothie':[80,3,15,1,20,0.4,0.4,80,18,0.3,280,40,1.5,50],'protein smoothie':[180,25,18,2,10,0.5,0.6,180,35,1.5,380,80,1.5,80],'stir fry':[130,10,9,5.5,15,0.1,1.2,35,28,0.8,280,350,2,100],
+};
+
+function lookupNutrition(input){
+  const lines=input.split(/[\n,;]+/).map(l=>l.trim()).filter(Boolean);
+  const t={name:'',cals:0,protein:0,carbs:0,fat:0,vitc:0,vitd:0,iron:0,calcium:0,mag:0,zinc:0,potassium:0,sodium:0,fibre:0,omega3:0};
+  const names=[];let matched=0;
+  for(const line of lines){
+    const gm=line.match(/(\d+\.?\d*)\s*g(?:rams?)?/i);
+    let grams=gm?parseFloat(gm[1]):null;
+    let food=line.replace(/(\d+\.?\d*)\s*g(?:rams?)?/i,'').replace(/^\d+\.?\d*\s*/,'').trim().toLowerCase();
+    if(!grams){const cm=line.match(/^(\d+\.?\d*)\s+(.+)$/);if(cm){grams=parseFloat(cm[1])*60;food=cm[2].toLowerCase().trim();}}
+    if(!grams)grams=100;
+    let best=null,score=0;
+    for(const key of Object.keys(NDATA)){
+      let s=0;
+      if(food===key)s=1000;
+      else if(food.includes(key))s=key.length*2;
+      else{for(const w of key.split(' ')){if(food.includes(w))s+=w.length;}}
+      if(s>score){score=s;best=key;}
+    }
+    if(best&&score>=3){
+      const[cal,pro,carb,fat,vc,vd,fe,ca,mg,zn,k,na,fib,om3]=NDATA[best];
+      const f=grams/100;
+      t.cals+=cal*f;t.protein+=pro*f;t.carbs+=carb*f;t.fat+=fat*f;
+      t.vitc+=vc*f;t.vitd+=vd*f;t.iron+=fe*f;t.calcium+=ca*f;
+      t.mag+=mg*f;t.zinc+=zn*f;t.potassium+=k*f;t.sodium+=na*f;
+      t.fibre+=fib*f;t.omega3+=om3*f;
+      names.push(best);matched++;
+    }
+  }
+  Object.keys(t).forEach(k=>{if(typeof t[k]==='number')t[k]=Math.round(t[k]*10)/10;});
+  t.name=names.length?names.slice(0,3).join(', ')+(names.length>3?' +more':''):input.slice(0,40);
+  return{totals:t,matched,total:lines.length};
+}
+
+function aiLookup(){
   const items=document.getElementById('lf-item').value.trim();
   const errEl=document.getElementById('lf-error');
   const resultEl=document.getElementById('lf-result');
-  const btn=document.getElementById('btn-ai-lookup');
   errEl.style.display='none';resultEl.style.display='none';pendingFood=null;
   if(!items){errEl.textContent='Please enter at least one food item.';errEl.style.display='block';return;}
-  btn.textContent='Calculating…';btn.disabled=true;btn.style.opacity='0.7';
-  try {
-    const res=await fetch('https://api.anthropic.com/v1/messages',{method:'POST',headers:{'Content-Type':'application/json','anthropic-dangerous-direct-browser-access':'true'},body:JSON.stringify({model:'claude-sonnet-4-20250514',max_tokens:1000,messages:[{role:'user',content:`You are a nutrition database. The user has listed several food items with gram amounts. Calculate the COMBINED total nutrition for the entire meal and return ONLY a JSON object:
-{"name":"short meal summary","cals":number,"protein":number,"carbs":number,"fat":number,"vitc":number,"vitd":number,"iron":number,"calcium":number,"mag":number,"zinc":number,"potassium":number,"sodium":number,"fibre":number,"omega3":number}
-Food items:\n${items}\nReturn ONLY the JSON. Round to 1 decimal place.`}]})});
-    const data=await res.json();
-    const n=JSON.parse(data.content[0].text.replace(/```json|```/g,'').trim());
-    pendingFood={item:n.name,cals:n.cals||0,p:n.protein||0,c:n.carbs||0,f:n.fat||0,vitc:n.vitc||0,vitd:n.vitd||0,iron:n.iron||0,calcium:n.calcium||0,mag:n.mag||0,zinc:n.zinc||0,potassium:n.potassium||0,sodium:n.sodium||0,fibre:n.fibre||0,omega3:n.omega3||0};
-    document.getElementById('lf-result-name').textContent=n.name;
-    document.getElementById('lf-r-cals').textContent=n.cals;
-    document.getElementById('lf-r-p').textContent=(n.protein||0)+'g';
-    document.getElementById('lf-r-c').textContent=(n.carbs||0)+'g';
-    document.getElementById('lf-r-f').textContent=(n.fat||0)+'g';
-    document.getElementById('lf-r-micros').innerHTML=MICROS.filter(k=>pendingFood[k]>0).map(k=>`<span style="margin-right:12px">${MICRO_LABELS[k]}: <strong style="color:var(--text)">${pendingFood[k]} ${MICRO_UNITS[k]}</strong></span>`).join('')||'<span>No significant micronutrients</span>';
-    resultEl.style.display='block';
-  } catch(e){errEl.textContent="Couldn't calculate — check your connection and try again.";errEl.style.display='block';}
-  btn.textContent='Calculate Nutrition ✦';btn.disabled=false;btn.style.opacity='1';
+  const{totals,matched,total}=lookupNutrition(items);
+  if(matched===0){
+    errEl.style.color='var(--red)';
+    errEl.textContent="Couldn't recognise any foods — try e.g. '200g chicken breast, 150g white rice'";
+    errEl.style.display='block';return;
+  }
+  pendingFood={item:totals.name,cals:totals.cals,p:totals.protein,c:totals.carbs,f:totals.fat,vitc:totals.vitc,vitd:totals.vitd,iron:totals.iron,calcium:totals.calcium,mag:totals.mag,zinc:totals.zinc,potassium:totals.potassium,sodium:totals.sodium,fibre:totals.fibre,omega3:totals.omega3};
+  document.getElementById('lf-result-name').textContent=totals.name;
+  document.getElementById('lf-r-cals').textContent=Math.round(totals.cals);
+  document.getElementById('lf-r-p').textContent=totals.protein+'g';
+  document.getElementById('lf-r-c').textContent=totals.carbs+'g';
+  document.getElementById('lf-r-f').textContent=totals.fat+'g';
+  document.getElementById('lf-r-micros').innerHTML=MICROS.filter(k=>pendingFood[k]>0).map(k=>`<span style="margin-right:12px">${MICRO_LABELS[k]}: <strong style="color:var(--text)">${pendingFood[k]} ${MICRO_UNITS[k]}</strong></span>`).join('')||'<span style="color:var(--muted)">No significant micronutrients</span>';
+  if(matched<total){errEl.style.color='var(--gold)';errEl.textContent=`${total-matched} item(s) not recognised — try adding weights e.g. "200g chicken"`;errEl.style.display='block';}
+  resultEl.style.display='block';
 }
+
 
 async function saveFood(){
   if(!pendingFood) return;
@@ -1214,7 +1267,9 @@ async function getTodayCalTarget(){
   // No saved session — show login
   document.getElementById('screen-login').classList.add('active');
 })();
+
 </script>
+
 
 <div id="modal-manageHabits" class="modal-overlay">
   <div class="modal-sheet">
@@ -1274,6 +1329,7 @@ async function getTodayCalTarget(){
     <button class="btn-primary" onclick="saveNutritionTargets()">Save Targets</button>
   </div>
 </div>
+
 
 </body>
 </html>
