@@ -75,17 +75,17 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 </div>
 
 <div id="screen-login" class="screen active" style="padding:0">
-  <div style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:40px 24px;background:linear-gradient(160deg,#0d1200 0%,#0d0d0d 100%)">
-    <div style="text-align:center;margin-bottom:48px">
-      <div style="font-size:52px;margin-bottom:16px">💪</div>
-      <div class="bc" style="font-size:38px;font-weight:900;color:var(--accent)">Darcy's PT</div>
-      <div style="font-size:14px;color:var(--muted);margin-top:6px">Your training app</div>
+  <div style="min-height:100vh;display:flex;flex-direction:column;justify-content:center;padding:40px 24px;">
+    <div style="text-align:center;margin-bottom:40px">
+      <div style="font-size:48px;margin-bottom:12px">💪</div>
+      <div class="bc" style="font-size:32px;font-weight:900;">Darcy's PT</div>
+      <div style="font-size:14px;color:var(--muted);margin-top:4px">Your training app</div>
     </div>
     <label class="label">Email</label>
     <input id="login-email" type="email" placeholder="your@email.com" autocomplete="email" style="margin-bottom:12px" onkeydown="if(event.key==='Enter')doClientLogin()"/>
-    <label class="label">Your Name <span style="color:var(--muted);font-size:10px">(first time only)</span></label>
+    <label class="label">Name <span style="color:var(--muted);font-size:10px;text-transform:none;letter-spacing:0">(first time only)</span></label>
     <input id="login-name" placeholder="e.g. Jordan Mills" autocomplete="name" style="margin-bottom:16px" onkeydown="if(event.key==='Enter')doClientLogin()"/>
-    <label style="display:flex;align-items:center;gap:10px;margin-bottom:24px;cursor:pointer">
+    <label style="display:flex;align-items:center;gap:10px;margin-bottom:20px;cursor:pointer">
       <input type="checkbox" id="login-remember" checked style="width:18px;height:18px;accent-color:var(--accent)"/>
       <span style="font-size:14px;color:var(--muted)">Keep me signed in</span>
     </label>
@@ -445,7 +445,11 @@ async function doClientLogin(){
   const {data:p}=await sb.from('client_preferences').select('*').eq('client_id',clientId).single();
   prefs=p||{accent_color:'#c8ff00'};
   if(prefs.accent_color) applyTheme(prefs.accent_color);
-  if(document.getElementById('login-remember')?.checked !== false) localStorage.setItem('pt-client-id',clientId);
+  if(document.getElementById('login-remember')?.checked !== false){
+    localStorage.setItem('pt-client-email', email);
+  } else {
+    localStorage.removeItem('pt-client-email');
+  }
   document.getElementById('screen-login').classList.remove('active');
   goTo('today');
 }
@@ -853,7 +857,15 @@ async function saveFood(){
     const {data:newDay}=await sb.from('nutrition_days').insert({client_id:clientId,date:today,cals:0,protein:0,carbs:0,fat:0}).select().single();
     day=newDay;
   }
-  await sb.from('food_entries').insert({nutrition_day_id:day.id,meal,...pendingFood,protein:pendingFood.p,carbs:pendingFood.c,fat:pendingFood.f});
+  await sb.from('food_entries').insert({
+    nutrition_day_id:day.id, meal,
+    item:pendingFood.item, cals:pendingFood.cals,
+    protein:pendingFood.p, carbs:pendingFood.c, fat:pendingFood.f,
+    vitc:pendingFood.vitc, vitd:pendingFood.vitd, iron:pendingFood.iron,
+    calcium:pendingFood.calcium, mag:pendingFood.mag, zinc:pendingFood.zinc,
+    potassium:pendingFood.potassium, sodium:pendingFood.sodium,
+    fibre:pendingFood.fibre, omega3:pendingFood.omega3
+  });
   // Recalculate totals
   const {data:entries}=await sb.from('food_entries').select('*').eq('nutrition_day_id',day.id);
   const totals={cals:0,protein:0,carbs:0,fat:0};
@@ -1238,33 +1250,22 @@ async function getTodayCalTarget(){
   return p.cal_target||2000;
 }
 
-// ─── PWA GATE + AUTO LOGIN ───────────────────────────────────────────────────
-(async()=>{
-  // Check if running in browser (not PWA/standalone)
+// ─── INIT ────────────────────────────────────────────────────────────────────
+(()=>{
+  // Check if running in browser (not PWA/standalone) — show install screen
   const isStandalone = window.navigator.standalone === true || window.matchMedia('(display-mode: standalone)').matches;
   if(!isStandalone){
-    // Show install instructions, hide everything else
     document.getElementById('screen-login').classList.remove('active');
-    const installEl = document.getElementById('screen-install');
-    installEl.style.display = 'flex';
+    document.getElementById('screen-install').style.display = 'flex';
     return;
   }
-
-  // Try auto-login from saved session
-  const savedId = localStorage.getItem('pt-client-id');
-  if(savedId){
-    const {data:cl} = await sb.from('clients').select('*').eq('id',savedId).single();
-    if(cl){
-      clientId = savedId; clientData = cl;
-      const {data:p} = await sb.from('client_preferences').select('*').eq('client_id',clientId).single();
-      prefs = p || {accent_color:'#c8ff00'};
-      if(prefs.accent_color) applyTheme(prefs.accent_color);
-      document.getElementById('screen-login').classList.remove('active');
-      goTo('today');
-      return;
-    }
+  // Always show login — pre-fill email if saved
+  const savedEmail = localStorage.getItem('pt-client-email');
+  if(savedEmail){
+    document.getElementById('login-email').value = savedEmail;
+    // Focus the sign in button since email is pre-filled
+    document.getElementById('login-name').placeholder = 'Not needed if returning';
   }
-  // No saved session — show login
   document.getElementById('screen-login').classList.add('active');
 })();
 
