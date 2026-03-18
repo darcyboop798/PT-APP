@@ -400,15 +400,20 @@ async function openSetNutritionTargets(){
 }
 
 async function saveNutritionTargetsForClient(){
-  await sb.from('client_preferences').upsert({
-    client_id:selClientId,
-    cal_target:+document.getElementById('snt-cals').value||2000,
-    protein_target:+document.getElementById('snt-protein').value||150,
-    carbs_target:+document.getElementById('snt-carbs').value||200,
-    fat_target:+document.getElementById('snt-fat').value||65,
-  });
+  const cals = +document.getElementById('snt-cals').value||2000;
+  const protein = +document.getElementById('snt-protein').value||150;
+  const carbs = +document.getElementById('snt-carbs').value||200;
+  const fat = +document.getElementById('snt-fat').value||65;
+
+  // Try update first, then insert if no row exists
+  const {data:existing} = await sb.from('client_preferences').select('id').eq('client_id',selClientId).single();
+  if(existing){
+    await sb.from('client_preferences').update({cal_target:cals,protein_target:protein,carbs_target:carbs,fat_target:fat}).eq('client_id',selClientId);
+  } else {
+    await sb.from('client_preferences').insert({client_id:selClientId,cal_target:cals,protein_target:protein,carbs_target:carbs,fat_target:fat});
+  }
   closeModal('setNutritionTargets');
-  toast('Nutrition targets saved for client!');
+  toast('Targets saved! ✓');
   renderNutritionTab();
 }
 
@@ -734,33 +739,53 @@ async function uploadPhoto(e){
 
 // ─── NUTRITION TAB ────────────────────────────────────────────────────────────
 async function renderNutritionTab(){
-  const {data:days} = await sb.from('nutrition_days').select('*,food_entries(*)').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(7);
+  const [{data:days},{data:clientPrefs}] = await Promise.all([
+    sb.from('nutrition_days').select('*,food_entries(*)').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(7),
+    sb.from('client_preferences').select('*').eq('client_id',selClientId).single()
+  ]);
   const nu = days||[];
-  const today = nu[0]||null;
+  const today = nu.find(d=>d.date===new Date().toLocaleDateString('en-GB',{day:'numeric',month:'short'}))||nu[0]||null;
+  const calTgt = clientPrefs?.cal_target||2000;
+  const proTgt = clientPrefs?.protein_target||150;
+  const carbTgt = clientPrefs?.carbs_target||200;
+  const fatTgt = clientPrefs?.fat_target||65;
+
   let todayCard='';
   if(today){
-    const tgt=today.cal_target||2000;
-    const pct=Math.min(100,Math.round(today.cals/tgt*100));
+    // Calculate live from entries — never trust stored totals
+    const entries = today.food_entries||[];
+    const liveCals    = entries.reduce((s,f)=>s+(f.cals||0),0);
+    const liveProtein = entries.reduce((s,f)=>s+(f.protein||0),0);
+    const liveCarbs   = entries.reduce((s,f)=>s+(f.carbs||0),0);
+    const liveFat     = entries.reduce((s,f)=>s+(f.fat||0),0);
+    const pct = Math.min(100,Math.round(liveCals/calTgt*100));
     todayCard=`<div class="card" style="margin-bottom:14px">
       <div class="row" style="margin-bottom:14px">
-        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Today</div><div class="syne" style="font-size:30px;font-weight:800">${Math.round(today.cals).toLocaleString()}<span style="font-size:14px;color:var(--muted);font-weight:400"> kcal</span></div><div style="font-size:12px;color:${pct>110?'var(--red)':pct>90?'var(--green)':'var(--gold)'};margin-top:2px">${pct}% of ${tgt.toLocaleString()} target</div></div>
+        <div><div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1px">Today</div><div class="syne" style="font-size:30px;font-weight:800">${Math.round(liveCals).toLocaleString()}<span style="font-size:14px;color:var(--muted);font-weight:400"> kcal</span></div><div style="font-size:12px;color:${pct>110?'var(--red)':pct>90?'var(--green)':'var(--gold)'};margin-top:2px">${pct}% of ${calTgt.toLocaleString()} target</div></div>
         <svg width="72" height="72" viewBox="0 0 72 72"><circle cx="36" cy="36" r="28" fill="none" stroke="var(--border)" stroke-width="8"/><circle cx="36" cy="36" r="28" fill="none" stroke="${pct>110?'var(--red)':'var(--accent)'}" stroke-width="8" stroke-dasharray="${pct*1.759} 175.9" stroke-linecap="round" transform="rotate(-90 36 36)"/><text x="36" y="40" text-anchor="middle" font-size="13" font-weight="800" fill="var(--text)">${pct}%</text></svg>
       </div>
       <div class="grid2">
-        ${[['Protein',Math.round(today.protein),today.protein_target||150,'var(--accent)'],['Carbs',Math.round(today.carbs),today.carbs_target||200,'var(--gold)'],['Fat',Math.round(today.fat),today.fat_target||65,'var(--green)']].map(([l,v,t,col])=>`<div class="card2"><div class="row" style="margin-bottom:6px"><span style="font-size:11px;color:var(--muted)">${l}</span><span style="font-size:12px;font-weight:800;color:${col}">${v}g</span></div><div style="background:var(--muted2);border-radius:4px;height:5px;overflow:hidden"><div style="width:${Math.min(100,t?Math.round(v/t*100):0)}%;height:100%;background:${col};border-radius:4px"></div></div><div style="font-size:10px;color:var(--muted);margin-top:4px">Target: ${t}g</div></div>`).join('')}
+        ${[['Protein',Math.round(liveProtein),proTgt,'var(--accent)'],['Carbs',Math.round(liveCarbs),carbTgt,'var(--gold)'],['Fat',Math.round(liveFat),fatTgt,'var(--green)']].map(([l,v,t,col])=>`<div class="card2"><div class="row" style="margin-bottom:6px"><span style="font-size:11px;color:var(--muted)">${l}</span><span style="font-size:12px;font-weight:800;color:${col}">${v}g</span></div><div style="background:var(--muted2);border-radius:4px;height:5px;overflow:hidden"><div style="width:${Math.min(100,t?Math.round(v/t*100):0)}%;height:100%;background:${col};border-radius:4px"></div></div><div style="font-size:10px;color:var(--muted);margin-top:4px">Target: ${t}g</div></div>`).join('')}
       </div>
     </div>`;
   }
-  const diary=nu.map(day=>`<div class="card" style="margin-bottom:12px">
+  const diary=nu.map(day=>{
+    const dayEntries=day.food_entries||[];
+    const dayCals=dayEntries.reduce((s,f)=>s+(f.cals||0),0);
+    const dayP=dayEntries.reduce((s,f)=>s+(f.protein||0),0);
+    const dayC=dayEntries.reduce((s,f)=>s+(f.carbs||0),0);
+    const dayF=dayEntries.reduce((s,f)=>s+(f.fat||0),0);
+    return `<div class="card" style="margin-bottom:12px">
     <div class="row" style="padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px">
       <span style="font-size:13px;font-weight:800;color:var(--accent)">${day.date}</span>
-      <span style="font-size:11px;color:var(--muted)">${Math.round(day.cals||0).toLocaleString()} kcal · P:${Math.round(day.protein||0)}g C:${Math.round(day.carbs||0)}g F:${Math.round(day.fat||0)}g</span>
+      <span style="font-size:11px;color:var(--muted)">${Math.round(dayCals).toLocaleString()} kcal · P:${Math.round(dayP)}g C:${Math.round(dayC)}g F:${Math.round(dayF)}g</span>
     </div>
-    ${(day.food_entries||[]).length?'<div style="font-size:12px;color:var(--muted);padding:8px 0">'+day.food_entries.map(f=>`<div class="row" style="padding:3px 0"><span>${f.item}</span><span>${Math.round(f.cals||0)} kcal</span></div>`).join('')+'</div>':'<div style="font-size:12px;color:var(--muted);padding:8px 0">No entries</div>'}
-  </div>`).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No food logged yet.</div>`;
+    ${dayEntries.length?'<div style="font-size:12px;color:var(--muted);padding:8px 0">'+dayEntries.map(f=>`<div class="row" style="padding:3px 0"><span>${f.item}</span><span>${Math.round(f.cals||0)} kcal</span></div>`).join('')+'</div>':'<div style="font-size:12px;color:var(--muted);padding:8px 0">No entries</div>'}
+  </div>`;}).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No food logged yet.</div>`;
+
   document.getElementById('client-tab-content').innerHTML=`
     <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">Nutrition tracking</span><button class="btn-tag" style="font-size:11px" onclick="openSetNutritionTargets()">🎯 Set Targets</button></div>
-    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${nu.length} days logged</span></div>
+    <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${nu.length} days logged · Targets: ${calTgt} kcal / P${proTgt}g / C${carbTgt}g / F${fatTgt}g</span></div>
     ${todayCard}
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Food Diary</div>
     ${diary}`;
