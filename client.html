@@ -380,7 +380,7 @@ const sb = createClient(
 const MICROS=['vitc','vitd','iron','calcium','mag','zinc','potassium','sodium','fibre','omega3'];
 const MICRO_LABELS={vitc:'Vit C',vitd:'Vit D',iron:'Iron',calcium:'Calcium',mag:'Magnesium',zinc:'Zinc',potassium:'Potassium',sodium:'Sodium',fibre:'Fibre',omega3:'Omega-3'};
 const MICRO_UNITS={vitc:'mg',vitd:'mcg',iron:'mg',calcium:'mg',mag:'mg',zinc:'mg',potassium:'mg',sodium:'mg',fibre:'g',omega3:'mg'};
-const MICRO_UNITS={vitc:'mg',vitd:'mcg',iron:'mg',calcium:'mg',mag:'mg',zinc:'mg',potassium:'mg',sodium:'mg',fibre:'g',omega3:'mg'};
+
 const MICRO_COLORS={vitc:'#ff6b6b',vitd:'#ffd166',iron:'#ef476f',calcium:'#6ee7ff',mag:'#06d6a0',zinc:'#a78bfa',potassium:'#fb923c',sodium:'#f72585',fibre:'#4cc9f0',omega3:'#c8ff00'};
 const DEFAULT_MICRO_TGTS={vitc:90,vitd:20,iron:18,calcium:1000,mag:400,zinc:11,potassium:3500,sodium:2300,fibre:30,omega3:1000};
 const ACT_ICONS={steps:'👟',walk:'🚶',run:'🏃',cycle:'🚴',swim:'🏊',hiit:'🔥',yoga:'🧘',pilates:'🤸',boxing:'🥊',muaythai:'🥋',bjj:'🥋',mma:'🥋',wrestling:'🤼',football:'⚽',basketball:'🏀',tennis:'🎾',golf:'⛳',rowing:'🚣',crossfit:'🏋️',dance:'💃',hike:'🥾',ski:'⛷️',other:'🏅'};
@@ -793,7 +793,6 @@ async function renderProgress(){
   document.getElementById('progress-body').innerHTML = html;
 }
 
-
 async function saveWeight(){
   const v=parseFloat(document.getElementById('lw-val').value);
   if(!v) return;
@@ -850,7 +849,6 @@ async function renderFood(){
     }
   }
 }
-
 
 // ── LOCAL NUTRITION DATABASE ─────────────────────────────────────────────────
 const NDATA={
@@ -927,7 +925,6 @@ function aiLookup(){
   resultEl.style.display='block';
 }
 
-
 async function saveFood(){
   if(!pendingFood) return;
   const meal=document.getElementById('lf-meal').value;
@@ -971,7 +968,6 @@ async function saveFood(){
   toast('Food logged!');
   renderFood();
 }
-
 
 async function recalcTotals(){
   const today = fmtToday();
@@ -1249,7 +1245,6 @@ document.querySelectorAll('.modal-overlay').forEach(o=>{
 });
 
 
-
 // ─── HABITS MANAGEMENT ───────────────────────────────────────────────────────
 async function loadHabitsModal(){
   const {data:habits}=await sb.from('habits').select('*').eq('client_id',clientId);
@@ -1387,7 +1382,6 @@ async function getTodayCalTarget(){
 
 </script>
 
-
 <div id="modal-manageHabits" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
@@ -1450,7 +1444,6 @@ async function getTodayCalTarget(){
     <button class="btn-primary" onclick="saveNutritionTargets()">Save Targets</button>
   </div>
 </div>
-
 
 </body>
 </html>

@@ -645,7 +645,6 @@ async function renderWorkoutsTab(){
     if(tonnage.length>=2) charts=`<div class="card" style="margin-bottom:12px"><div style="font-size:12px;font-weight:800;text-transform:uppercase;letter-spacing:1px;margin-bottom:2px">Session Volume</div><div style="font-size:11px;color:var(--muted);margin-bottom:12px">Sets × Reps × Weight</div>${barChart(tonnage,'#6ee7ff','kg')}</div>`;
   }
   // PBs
-  const {data:pbs} = await sb.from('personal_bests').select('*').eq('client_id',selClientId).order('created_at',{ascending:false}).limit(5);
   const pbCard = pbs&&pbs.length?`<div class="card" style="margin-bottom:12px;border-color:rgba(255,209,102,.3)">
     <div style="font-size:12px;font-weight:800;color:var(--gold);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">🏆 Personal Bests</div>
     ${pbs.map(pb=>`<div class="row" style="padding:6px 0;border-bottom:1px solid var(--border)"><span style="font-size:13px;font-weight:700">${pb.exercise}</span><span style="font-size:13px;font-weight:800;color:var(--gold)">${pb.weight}kg × ${pb.reps}</span></div>`).join('')}
