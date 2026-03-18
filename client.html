@@ -41,6 +41,8 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 .modal-overlay.open{display:flex;}
 .modal-sheet{background:var(--card);border-radius:22px 22px 0 0;width:100%;max-height:88vh;overflow-y:auto;padding:0 20px 48px;border:1px solid var(--border);border-bottom:none;}
 .modal-handle{width:40px;height:4px;background:var(--muted2);border-radius:2px;margin:12px auto 16px;}
+.modal-close{position:absolute;top:14px;right:16px;background:var(--card2);border:none;color:var(--muted);font-size:20px;width:32px;height:32px;border-radius:50%;display:flex;align-items:center;justify-content:center;cursor:pointer;line-height:1;}
+.modal-sheet{position:relative;}
 .label{font-size:11px;color:var(--muted);margin-bottom:6px;display:block;text-transform:uppercase;letter-spacing:1.2px;}
 .grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;}
 .row{display:flex;justify-content:space-between;align-items:center;}
@@ -178,7 +180,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 </div>
 
 <!-- BOTTOM NAV -->
-<nav class="bottom-nav">
+<nav class="bottom-nav" id="bottom-nav" style="display:none">
   <button class="nav-btn active" onclick="goTo('today')" id="nav-today"><span class="nav-icon">⚡</span>Today</button>
   <button class="nav-btn" onclick="goTo('program')" id="nav-program"><span class="nav-icon">📋</span>Program</button>
   <button class="nav-btn" onclick="goTo('progress')" id="nav-progress"><span class="nav-icon">📈</span>Progress</button>
@@ -191,6 +193,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-logFood" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('logFood')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">Log Food</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Type what you ate — one item per line with gram amounts. We'll calculate the rest.</div>
     <label class="label">Meal</label>
@@ -222,6 +225,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-logWeight" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('logWeight')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">Log Weight</div>
     <label class="label">Your weight today (kg)</label>
     <input id="lw-val" type="number" step="0.1" placeholder="e.g. 82.5" style="margin-bottom:24px"/>
@@ -232,6 +236,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-logActivity" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('logActivity')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">Log Activity</div>
     <label class="label">Activity Type</label>
     <select id="act-type" style="margin-bottom:12px;appearance:none" onchange="onActTypeChange()">
@@ -261,6 +266,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-readiness" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('readiness')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">Daily Readiness</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Takes 30 seconds — helps Darcy adjust your training.</div>
     <label class="label">😴 Hours of sleep last night</label>
@@ -276,6 +282,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-checkin" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('checkin')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">Weekly Check-in</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Darcy will review this every week.</div>
     <label class="label">😴 Sleep quality (1–10)</label>
@@ -297,6 +304,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-uploadVideo" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('uploadVideo')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">Upload Form Video</div>
     <label class="label">Exercise Name</label>
     <input id="uv-exercise" placeholder="e.g. Squat" style="margin-bottom:12px"/>
@@ -312,6 +320,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-theme" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('theme')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">Customise Your App</div>
     <label class="label">Nickname</label>
     <input id="theme-nickname" placeholder="e.g. Jords" style="margin-bottom:12px"/>
@@ -340,6 +349,7 @@ button{cursor:pointer;font-family:'Nunito',sans-serif;}
 <div id="modal-booking" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('booking')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">Book a Session</div>
     <label class="label">Date</label>
     <input id="book-date" type="date" style="margin-bottom:12px"/>
@@ -403,6 +413,7 @@ function selThemeColor(col){
 }
 
 function goTo(screen){
+  if(!clientId) return;
   document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b=>b.classList.remove('active'));
   document.getElementById('screen-'+screen).classList.add('active');
@@ -451,6 +462,7 @@ async function doClientLogin(){
     localStorage.removeItem('pt-client-email');
   }
   document.getElementById('screen-login').classList.remove('active');
+  document.getElementById('bottom-nav').style.display='flex';
   goTo('today');
 }
 
@@ -769,6 +781,19 @@ async function renderFood(){
     ${(day.food_entries||[]).map(f=>`<div class="row" style="padding:5px 0;border-bottom:1px solid var(--border)"><div><span style="font-size:13px">${f.item}</span><span style="font-size:11px;color:var(--muted);margin-left:6px">${f.meal}</span></div><span style="font-size:12px;color:var(--muted)">${Math.round(f.cals||0)} kcal</span></div>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:6px 0">No entries</div>'}
   </div>`).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No food logged yet.</div>`;
   document.getElementById('food-body').innerHTML=html;
+
+  // Show recalculate button if today shows 0 but has entries
+  const todayHasEntries = nu.length && nu[0].food_entries && nu[0].food_entries.length > 0;
+  const todayShowsZero = !today || (today.cals||0) === 0;
+  const recalcRow = document.getElementById('food-recalc-row');
+  if(recalcRow){
+    if(todayHasEntries && todayShowsZero){
+      recalcRow.style.display='block';
+      recalcRow.innerHTML=`<button onclick="recalcTotals()" style="width:100%;background:rgba(239,71,111,.15);color:var(--red);border:1px solid rgba(239,71,111,.3);border-radius:12px;padding:12px;font-size:13px;font-weight:700">⚠️ Today shows 0 kcal — tap to fix</button>`;
+    } else {
+      recalcRow.style.display='none';
+    }
+  }
 }
 
 
@@ -852,32 +877,68 @@ async function saveFood(){
   if(!pendingFood) return;
   const meal=document.getElementById('lf-meal').value;
   const today=fmtToday();
+
+  // Get or create today's nutrition day
   let {data:day}=await sb.from('nutrition_days').select('*').eq('client_id',clientId).eq('date',today).single();
   if(!day){
-    const {data:newDay}=await sb.from('nutrition_days').insert({client_id:clientId,date:today,cals:0,protein:0,carbs:0,fat:0}).select().single();
+    const {data:newDay}=await sb.from('nutrition_days').insert({
+      client_id:clientId, date:today,
+      cals:0, protein:0, carbs:0, fat:0
+    }).select().single();
     day=newDay;
   }
+
+  // Save the food entry
   await sb.from('food_entries').insert({
     nutrition_day_id:day.id, meal,
     item:pendingFood.item, cals:pendingFood.cals,
     protein:pendingFood.p, carbs:pendingFood.c, fat:pendingFood.f,
-    vitc:pendingFood.vitc, vitd:pendingFood.vitd, iron:pendingFood.iron,
-    calcium:pendingFood.calcium, mag:pendingFood.mag, zinc:pendingFood.zinc,
-    potassium:pendingFood.potassium, sodium:pendingFood.sodium,
-    fibre:pendingFood.fibre, omega3:pendingFood.omega3
+    vitc:pendingFood.vitc||0, vitd:pendingFood.vitd||0, iron:pendingFood.iron||0,
+    calcium:pendingFood.calcium||0, mag:pendingFood.mag||0, zinc:pendingFood.zinc||0,
+    potassium:pendingFood.potassium||0, sodium:pendingFood.sodium||0,
+    fibre:pendingFood.fibre||0, omega3:pendingFood.omega3||0
   });
-  // Recalculate totals
-  const {data:entries}=await sb.from('food_entries').select('*').eq('nutrition_day_id',day.id);
-  const totals={cals:0,protein:0,carbs:0,fat:0};
-  MICROS.forEach(k=>totals[k]=0);
-  (entries||[]).forEach(f=>{totals.cals+=f.cals||0;totals.protein+=f.protein||0;totals.carbs+=f.carbs||0;totals.fat+=f.fat||0;MICROS.forEach(k=>totals[k]+=(f[k]||0));});
-  await sb.from('nutrition_days').update(totals).eq('id',day.id);
+
+  // Update day totals by adding new values to existing — avoids race condition
+  const newTotals = {
+    cals:    (day.cals||0)    + (pendingFood.cals||0),
+    protein: (day.protein||0) + (pendingFood.p||0),
+    carbs:   (day.carbs||0)   + (pendingFood.c||0),
+    fat:     (day.fat||0)     + (pendingFood.f||0),
+  };
+  MICROS.forEach(k=>{ newTotals[k]=(day[k]||0)+(pendingFood[k]||0); });
+  await sb.from('nutrition_days').update(newTotals).eq('id',day.id);
+
   document.getElementById('lf-item').value='';
   document.getElementById('lf-result').style.display='none';
   pendingFood=null;
   closeModal('logFood');
   toast('Food logged!');
   renderFood();
+}
+
+
+async function recalcTotals(){
+  const today = fmtToday();
+  const {data:day} = await sb.from('nutrition_days').select('*').eq('client_id',clientId).eq('date',today).single();
+  if(!day){ toast('No food day found','var(--red)'); return; }
+  // Small delay to ensure all entries are committed
+  await new Promise(r=>setTimeout(r,500));
+  const {data:entries} = await sb.from('food_entries').select('*').eq('nutrition_day_id',day.id);
+  if(!entries||!entries.length){ toast('No entries found','var(--red)'); return; }
+  const totals={cals:0,protein:0,carbs:0,fat:0};
+  MICROS.forEach(k=>totals[k]=0);
+  entries.forEach(f=>{
+    totals.cals    += f.cals||0;
+    totals.protein += f.protein||0;
+    totals.carbs   += f.carbs||0;
+    totals.fat     += f.fat||0;
+    MICROS.forEach(k=>totals[k]+=(f[k]||0));
+  });
+  await sb.from('nutrition_days').update(totals).eq('id',day.id);
+  toast('Totals fixed! ✓');
+  renderFood();
+  renderToday();
 }
 
 // ─── LOG ─────────────────────────────────────────────────────────────────────
@@ -1275,6 +1336,7 @@ async function getTodayCalTarget(){
 <div id="modal-manageHabits" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('manageHabits')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">My Habits</div>
     <div id="habits-list-modal" style="margin-bottom:16px"></div>
     <div style="font-size:12px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Add New Habit</div>
@@ -1289,6 +1351,7 @@ async function getTodayCalTarget(){
 <div id="modal-photoCompare" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('photoCompare')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:16px">📸 Progress Comparison</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Swipe to compare your first and latest photos.</div>
     <div id="compare-body"></div>
@@ -1298,6 +1361,7 @@ async function getTodayCalTarget(){
 <div id="modal-referral" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('referral')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">🎁 Refer a Friend</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:20px">Share your code — if they sign up you get a discount month!</div>
     <div style="background:var(--accentdim);border:1px solid rgba(200,255,0,.25);border-radius:14px;padding:20px;text-align:center;margin-bottom:20px">
@@ -1311,6 +1375,7 @@ async function getTodayCalTarget(){
 <div id="modal-nutritionSettings" class="modal-overlay">
   <div class="modal-sheet">
     <div class="modal-handle"></div>
+    <button class="modal-close" onclick="closeModal('nutritionSettings')" aria-label="Close">✕</button>
     <div class="bc" style="font-size:22px;font-weight:800;margin-bottom:6px">Nutrition Targets</div>
     <div style="font-size:13px;color:var(--muted);margin-bottom:16px">Set different targets for training days vs rest days.</div>
     <div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:10px">Training Days</div>
