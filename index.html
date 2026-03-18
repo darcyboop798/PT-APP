@@ -419,14 +419,14 @@ async function saveNutritionTargetsForClient(){
 
 // ─── ARCHIVE / DELETE CLIENT ─────────────────────────────────────────────────
 function archiveClient(){
-  const c = selClient();
-  const action = confirm(`Archive ${c.name}? They will be hidden from your dashboard but their data is kept.\n\nPress Cancel to keep them active.`);
-  if(!action) return;
-  const del = confirm(`Archive confirmed. Do you want to permanently DELETE ${c.name} and all their data instead?\n\nThis cannot be undone — press Cancel to just archive.`);
-  if(del){
-    deleteClientPermanently(c.id, c.name);
+  const cl = selClient();
+  if(!cl||!cl.id){toast('No client selected','var(--red)');return;}
+  // Use a simple choice — one confirm for archive, second for delete
+  if(!confirm(`Archive ${cl.name}?\n\nThey will be hidden from your dashboard but all data is kept.\n\nOK = Archive  |  Cancel = Do nothing`)) return;
+  if(confirm(`Do you want to permanently DELETE ${cl.name} instead?\n\nThis will erase ALL their data and cannot be undone.\n\nOK = Delete permanently  |  Cancel = Just archive`)){
+    deleteClientPermanently(cl.id, cl.name);
   } else {
-    archiveClientOnly(c.id, c.name);
+    archiveClientOnly(cl.id, cl.name);
   }
 }
 
@@ -633,8 +633,12 @@ async function setTab(t){
 
 // ─── WORKOUTS TAB ─────────────────────────────────────────────────────────────
 async function renderWorkoutsTab(){
-  const {data:wos} = await sb.from('workouts').select('*,workout_exercises(*)').eq('client_id',selClientId).order('created_at',{ascending:false});
+  const [{data:wos},{data:pbData}] = await Promise.all([
+    sb.from('workouts').select('*,workout_exercises(*)').eq('client_id',selClientId).order('created_at',{ascending:false}),
+    sb.from('personal_bests').select('*').eq('client_id',selClientId)
+  ]);
   const sessions = wos||[];
+  const pbs = pbData||[];
   let charts='';
   if(sessions.length>=2){
     const tonnage=sessions.map(s=>({date:s.date,val:(s.workout_exercises||[]).reduce((sum,ex)=>sum+(ex.sets||0)*(ex.reps||0)*(ex.weight||0),0)})).filter(d=>d.val>0).reverse();
@@ -659,7 +663,14 @@ async function renderWorkoutsTab(){
       </div>
     </div>`).join('')}
   </div>`).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No sessions logged yet.</div>`;
+  const totalVol = sessions.reduce((s,w)=>(w.workout_exercises||[]).reduce((ss,e)=>ss+(e.sets||0)*(e.reps||0)*(e.weight||0),s),0);
+  const statsStrip = `<div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:16px">
+    <div class="card2" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--accent)">${sessions.length}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Sessions</div></div>
+    <div class="card2" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--gold)">${totalVol>0?Math.round(totalVol/1000)+'t':'—'}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">Total Vol</div></div>
+    <div class="card2" style="text-align:center"><div class="syne" style="font-size:22px;font-weight:800;color:var(--green)">${pbs.length}</div><div style="font-size:10px;color:var(--muted);margin-top:2px">PBs</div></div>
+  </div>`;
   document.getElementById('client-tab-content').innerHTML=`
+    ${statsStrip}
     <div class="row" style="margin-bottom:14px"><span style="font-size:13px;color:var(--muted)">${sessions.length} sessions</span><button class="btn-tag" style="font-size:11px" onclick="openProgressionSuggestions()">🤖 AI Progression</button></div>
     ${pbCard}${charts}
     <div style="font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:1.5px;margin-bottom:10px">Session Log</div>${log}`;

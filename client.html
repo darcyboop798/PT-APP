@@ -380,6 +380,7 @@ const sb = createClient(
 const MICROS=['vitc','vitd','iron','calcium','mag','zinc','potassium','sodium','fibre','omega3'];
 const MICRO_LABELS={vitc:'Vit C',vitd:'Vit D',iron:'Iron',calcium:'Calcium',mag:'Magnesium',zinc:'Zinc',potassium:'Potassium',sodium:'Sodium',fibre:'Fibre',omega3:'Omega-3'};
 const MICRO_UNITS={vitc:'mg',vitd:'mcg',iron:'mg',calcium:'mg',mag:'mg',zinc:'mg',potassium:'mg',sodium:'mg',fibre:'g',omega3:'mg'};
+const MICRO_UNITS={vitc:'mg',vitd:'mcg',iron:'mg',calcium:'mg',mag:'mg',zinc:'mg',potassium:'mg',sodium:'mg',fibre:'g',omega3:'mg'};
 const MICRO_COLORS={vitc:'#ff6b6b',vitd:'#ffd166',iron:'#ef476f',calcium:'#6ee7ff',mag:'#06d6a0',zinc:'#a78bfa',potassium:'#fb923c',sodium:'#f72585',fibre:'#4cc9f0',omega3:'#c8ff00'};
 const DEFAULT_MICRO_TGTS={vitc:90,vitd:20,iron:18,calcium:1000,mag:400,zinc:11,potassium:3500,sodium:2300,fibre:30,omega3:1000};
 const ACT_ICONS={steps:'👟',walk:'🚶',run:'🏃',cycle:'🚴',swim:'🏊',hiit:'🔥',yoga:'🧘',pilates:'🤸',boxing:'🥊',muaythai:'🥋',bjj:'🥋',mma:'🥋',wrestling:'🤼',football:'⚽',basketball:'🏀',tennis:'🎾',golf:'⛳',rowing:'🚣',crossfit:'🏋️',dance:'💃',hike:'🥾',ski:'⛷️',other:'🏅'};
@@ -666,13 +667,13 @@ async function renderProgress(){
     {data:sessions},
     {data:pbs},
     {data:measures},
-    {data:photos}
+    {data:nutDays}
   ] = await Promise.all([
     sb.from('weights').select('*').eq('client_id',clientId).order('created_at',{ascending:true}),
     sb.from('workouts').select('*,workout_exercises(*)').eq('client_id',clientId).order('created_at',{ascending:false}).limit(20),
     sb.from('personal_bests').select('*').eq('client_id',clientId).order('created_at',{ascending:false}),
-    sb.from('measurements').select('*').eq('client_id',clientId).order('created_at',{ascending:false}).limit(2),
-    sb.from('progress_photos').select('*').eq('client_id',clientId).order('created_at',{ascending:false}).limit(1),
+    sb.from('measurements').select('*').eq('client_id',clientId).order('created_at',{ascending:true}),
+    sb.from('nutrition_days').select('*,food_entries(*)').eq('client_id',clientId).order('created_at',{ascending:false}).limit(1),
   ]);
 
   const latW = weights&&weights[weights.length-1];
@@ -725,14 +726,36 @@ async function renderProgress(){
     </div>`;
   }
 
-  // Measurements
-  if(latM){
-    html += `<div class="card" style="margin-bottom:16px">
-      <div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">📏 Latest Measurements <span style="font-size:10px;color:var(--muted);font-weight:400">${latM.date}</span></div>
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
-        ${[['Chest',latM.chest],['Waist',latM.waist],['Hips',latM.hips],['Arms',latM.arms],['Thighs',latM.thighs]].filter(([,v])=>v).map(([l,v])=>`<div class="card2" style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--accent)">${v}<span style="font-size:11px;color:var(--muted)">cm</span></div><div style="font-size:11px;color:var(--muted)">${l}</div></div>`).join('')}
-      </div>
-    </div>`;
+  // Measurements charts
+  const allMeasures = measures||[];
+  if(allMeasures.length>=2){
+    const measCharts = [['Waist','waist','#ffd166'],['Chest','chest','#6ee7ff'],['Hips','hips','#a78bfa'],['Arms','arms','#06d6a0'],['Thighs','thighs','#fb923c']].map(([label,key,color])=>{
+      const data = allMeasures.filter(m=>m[key]).map(m=>({date:m.date,val:m[key]}));
+      if(data.length<2) return '';
+      const vals=data.map(d=>d.val),min=Math.min(...vals),max=Math.max(...vals),rng=max-min||1;
+      const W=300,H=60,pts=data.map((d,i)=>[(i/(data.length-1))*(W-24)+12,H-((d.val-min)/rng)*(H-20)-10]);
+      const trend=(vals[vals.length-1]-vals[0]).toFixed(1);
+      return `<div style="margin-bottom:12px"><div style="display:flex;justify-content:space-between;margin-bottom:6px"><span style="font-size:12px;font-weight:800;color:${color}">${label}</span><span style="font-size:12px;font-weight:800;color:${parseFloat(trend)<0?'var(--green)':parseFloat(trend)>0?'var(--red)':'var(--muted)'}">${trend>0?'+':''}${trend}cm</span></div><svg width="100%" viewBox="0 0 ${W} ${H}" style="overflow:visible"><polyline fill="none" stroke="${color}" stroke-width="2" stroke-linecap="round" points="${pts.map(p=>p.join(',')).join(' ')}"/>${pts.map(([x,y])=>`<circle cx="${x}" cy="${y}" r="3" fill="${color}" stroke="var(--bg)" stroke-width="1.5"/>`).join('')}</svg></div>`;
+    }).join('');
+    if(measCharts.trim()) html += `<div class="card" style="margin-bottom:16px"><div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:14px">📏 Measurements</div>${measCharts}</div>`;
+  } else if(allMeasures.length===1){
+    const latM=allMeasures[0];
+    html += `<div class="card" style="margin-bottom:16px"><div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">📏 Latest Measurements <span style="font-size:10px;color:var(--muted);font-weight:400">${latM.date}</span></div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${[['Chest',latM.chest],['Waist',latM.waist],['Hips',latM.hips],['Arms',latM.arms],['Thighs',latM.thighs]].filter(([,v])=>v).map(([l,v])=>`<div class="card2" style="text-align:center"><div style="font-size:18px;font-weight:800;color:var(--accent)">${v}<span style="font-size:11px;color:var(--muted)">cm</span></div><div style="font-size:11px;color:var(--muted)">${l}</div></div>`).join('')}</div></div>`;
+  }
+
+  // Micros — today's micronutrients
+  const todayNut = nutDays&&nutDays[0]||null;
+  if(todayNut&&todayNut.food_entries&&todayNut.food_entries.length){
+    const MICRO_TGTS={vitc:90,vitd:20,iron:18,calcium:1000,mag:400,zinc:11,potassium:3500,sodium:2300,fibre:30,omega3:1000};
+    const MICRO_COLORS_C={vitc:'#ff6b6b',vitd:'#ffd166',iron:'#ef476f',calcium:'#6ee7ff',mag:'#06d6a0',zinc:'#a78bfa',potassium:'#fb923c',sodium:'#f72585',fibre:'#4cc9f0',omega3:''+(prefs?.accent_color||'#c8ff00')};
+    const micros={};
+    MICROS.forEach(k=>{micros[k]=todayNut.food_entries.reduce((s,f)=>s+(f[k]||0),0);});
+    const alerts=MICROS.filter(k=>(micros[k]||0)/MICRO_TGTS[k]<0.5);
+    const microBars=MICROS.map(k=>{
+      const val=Math.round(micros[k]);const tgt=MICRO_TGTS[k];const pct=Math.min(100,tgt?Math.round(val/tgt*100):0);const col=MICRO_COLORS_C[k];
+      return `<div class="card2"><div class="row" style="margin-bottom:5px"><span style="font-size:11px;color:var(--muted)">${MICRO_LABELS[k]}</span><span style="font-size:11px;font-weight:800;color:${col}">${val}<span style="font-weight:400;color:var(--muted)"> ${MICRO_UNITS[k]}</span></span></div><div style="background:rgba(255,255,255,.08);border-radius:4px;height:5px;overflow:hidden"><div style="width:${pct}%;height:100%;background:${col};border-radius:4px"></div></div><div style="font-size:10px;color:var(--muted);margin-top:3px">${pct}% of ${tgt}</div></div>`;
+    }).join('');
+    html += `<div class="card" style="margin-bottom:16px">${alerts.length?`<div style="font-size:12px;font-weight:800;color:var(--red);margin-bottom:10px">⚠ Low Today (&lt;50%): ${alerts.map(k=>MICRO_LABELS[k]).join(', ')}</div>`:''}<div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px;margin-bottom:12px">🔬 Today's Micros</div><div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">${microBars}</div></div>`;
   }
 
   // Personal Bests
