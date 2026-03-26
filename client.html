@@ -393,6 +393,7 @@ let prefs = null;
 let pendingFood = null;
 let logTab = 'workout';
 let selWeek = 0, selDay = 0;
+let logWeeks = [];
 let selThemeCol = '#c8ff00';
 
 // ─── UTILS ────────────────────────────────────────────────────────────────────
@@ -597,9 +598,35 @@ async function toggleHabit(habitId,logId){
 async function renderProgram(){
   const {data:progs}=await sb.from('programs').select('*').eq('client_id',clientId).order('created_at',{ascending:false}).limit(1);
   if(!progs||!progs.length){document.getElementById('program-body').innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 0">No program assigned yet.<br/>Darcy will add one soon!</div>`;return;}
-  const {data:weeks}=await sb.from('program_weeks').select('*,program_days(*,program_exercises(*),form_cues:program_days(program_exercises(name)))').eq('program_id',progs[0].id).order('week_num');
-  document.getElementById('program-title').textContent=progs[0].name;
-  document.getElementById('program-body').innerHTML=(weeks||[]).map(week=>`
+  const prog=progs[0];
+  document.getElementById('program-title').textContent=prog.name;
+
+  // Load weeks separately then days then exercises — avoids nested join issues
+  const {data:weeks}=await sb.from('program_weeks').select('*').eq('program_id',prog.id).order('week_num');
+  if(!weeks||!weeks.length){document.getElementById('program-body').innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 0">Program has no weeks yet — check back soon!</div>`;return;}
+
+  // Load days for all weeks
+  const weekIds=weeks.map(w=>w.id);
+  const {data:allDays}=await sb.from('program_days').select('*').in('week_id',weekIds).order('order_index');
+  const dayIds=(allDays||[]).map(d=>d.id);
+
+  // Load exercises for all days
+  const {data:allExercises}=dayIds.length ? await sb.from('program_exercises').select('*').in('day_id',dayIds).order('order_index') : {data:[]};
+
+  // Stitch together
+  const exByDay={};
+  (allExercises||[]).forEach(ex=>{
+    if(!exByDay[ex.day_id]) exByDay[ex.day_id]=[];
+    exByDay[ex.day_id].push(ex);
+  });
+  const daysByWeek={};
+  (allDays||[]).forEach(day=>{
+    if(!daysByWeek[day.week_id]) daysByWeek[day.week_id]=[];
+    daysByWeek[day.week_id].push({...day,program_exercises:exByDay[day.id]||[]});
+  });
+  const stitched=weeks.map(w=>({...w,program_days:daysByWeek[w.id]||[]}));
+
+  document.getElementById('program-body').innerHTML=stitched.map(week=>`
     <div style="margin-bottom:28px">
       <div class="bc" style="font-size:13px;font-weight:800;color:var(--accent);letter-spacing:3px;text-transform:uppercase;margin-bottom:12px">Week ${week.week_num}</div>
       ${(week.program_days||[]).map(day=>`
@@ -1003,15 +1030,78 @@ function setLogTab(tab){
   else renderActivityLog();
 }
 
+function renderLogExercises(){
+  const w=logWeeks[selWeek]||logWeeks[0];
+  if(!w){return;}
+  const sortedDays=(w.program_days||[]).sort((a,b)=>(a.order_index||0)-(b.order_index||0));
+  const day=sortedDays[selDay]||sortedDays[0];
+  if(!day){document.getElementById('log-exercise-rows').innerHTML='<div style="color:var(--muted);padding:20px 0;text-align:center">No exercises in this day.</div>';return;}
+
+  // Update week tab active states
+  document.querySelectorAll('.log-week-tab').forEach((btn,i)=>{
+    btn.style.background = i===selWeek ? 'var(--accent)' : 'var(--card2)';
+    btn.style.color = i===selWeek ? '#0d0d0d' : 'var(--muted)';
+  });
+  // Update day tab active states
+  document.querySelectorAll('.log-day-tab').forEach((btn,i)=>{
+    btn.style.color = i===selDay ? 'var(--accent)' : 'var(--muted)';
+    btn.style.border = i===selDay ? '1.5px solid var(--accent)' : '1.5px solid var(--border)';
+  });
+
+  document.getElementById('log-exercise-rows').innerHTML=(day.program_exercises||[]).map((ex,i)=>`
+    <div class="card" style="margin-bottom:12px">
+      <div class="row" style="margin-bottom:10px">
+        <div><div style="font-size:15px;font-weight:800">${ex.name}</div>${ex.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px">📝 ${ex.notes}</div>`:''}</div>
+        <div style="background:var(--accentdim);border:1px solid rgba(200,255,0,.2);border-radius:10px;padding:5px 10px;text-align:right;flex-shrink:0;margin-left:10px">
+          <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px">Target</div>
+          <div style="font-size:13px;font-weight:800;color:var(--accent)">${ex.sets}×${ex.reps}${ex.weight?' @ '+ex.weight+'kg':''}</div>
+          ${ex.rpe?`<div style="font-size:10px;color:rgba(200,255,0,.6)">RPE ${ex.rpe}</div>`:''}
+        </div>
+      </div>
+      <button onclick="toggleCues('lcues-${ex.id}')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);margin-bottom:8px">Form cues</button>
+      <div id="lcues-${ex.id}" style="display:none;margin-bottom:8px"></div>
+      <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">What you actually did:</div>
+      <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
+        <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">Sets</div><input id="ls-sets-${i}" type="number" value="${ex.sets}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
+        <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">Reps</div><input id="ls-reps-${i}" type="number" value="${ex.reps}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
+        <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">kg</div><input id="ls-weight-${i}" type="number" value="${ex.weight||''}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
+      </div>
+    </div>`).join('');
+
+  window.saveSession=async function(){
+    const w2=weeks[selWeek]||weeks[0];
+    const d2=(w2.program_days||[])[selDay];
+    if(!d2) return;
+    const {data:workout}=await sb.from('workouts').insert({client_id:clientId,date:fmtToday(),week_label:'Week '+w2.week_num,day_label:d2.day_label}).select().single();
+    const exercises=d2.program_exercises||[];
+    for(let i=0;i<exercises.length;i++){
+      const ex=exercises[i];
+      const sets=+document.getElementById(`ls-sets-${i}`)?.value||ex.sets;
+      const reps=+document.getElementById(`ls-reps-${i}`)?.value||ex.reps;
+      const weight=+document.getElementById(`ls-weight-${i}`)?.value||ex.weight||0;
+      await sb.from('workout_exercises').insert({workout_id:workout.id,name:ex.name,sets,reps,weight,order_index:i});
+      // Check for PB
+      const {data:existingPB}=await sb.from('personal_bests').select('*').eq('client_id',clientId).eq('exercise',ex.name).single();
+      if(!existingPB||(weight>existingPB.weight||(weight===existingPB.weight&&reps>existingPB.reps))){
+        if(existingPB) await sb.from('personal_bests').update({weight,reps,date:fmtToday()}).eq('id',existingPB.id);
+        else await sb.from('personal_bests').insert({client_id:clientId,exercise:ex.name,weight,reps,date:fmtToday()});
+        if(weight>(existingPB?.weight||0)) toast(`🏆 New PB on ${ex.name}!`,'var(--gold)');
+      }
+    }
+    document.getElementById('log-body').innerHTML=`<div style="text-align:center;padding:48px 20px"><div style="font-size:64px;margin-bottom:16px">💪</div><div class="bc" style="font-size:32px;font-weight:900;color:var(--accent);margin-bottom:8px">Session Saved!</div><div style="font-size:14px;color:var(--muted);margin-bottom:6px">${d2.day_label}</div><div style="font-size:13px;color:var(--muted);margin-bottom:28px">${exercises.length} exercises logged</div><button class="btn-primary" onclick="goTo('progress')">View Progress</button></div>`;
+  };
+  }
+
 async function renderLog(){
   logTab='workout';
   const {data:progs}=await sb.from('programs').select('*').eq('client_id',clientId).order('created_at',{ascending:false}).limit(1);
   if(!progs||!progs.length){document.getElementById('log-body').innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 0">No program assigned yet.</div>`;return;}
-  const {data:weeks}=await sb.from('program_weeks').select('*,program_days(*,program_exercises(*))').eq('program_id',progs[0].id).order('week_num');
-  if(!weeks||!weeks.length){document.getElementById('log-body').innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 0">Program has no weeks yet.</div>`;return;}
-  const weekTabs=weeks.map((w,i)=>`<button onclick="selWeek=${i};selDay=0;renderLogExercises()" style="padding:7px 16px;border-radius:20px;border:none;font-size:12px;font-weight:800;flex-shrink:0;white-space:nowrap;background:${i===selWeek?'var(--accent)':'var(--card2)'};color:${i===selWeek?'#0d0d0d':'var(--muted)'}">Week ${w.week_num}</button>`).join('');
-  const week=weeks[selWeek]||weeks[0];
-  const dayTabs=(week.program_days||[]).map((d,i)=>`<button onclick="selDay=${i};renderLogExercises()" style="padding:7px 14px;border-radius:20px;border:none;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap;background:var(--card2);color:${i===selDay?'var(--accent)':'var(--muted)'};border:${i===selDay?'1.5px solid var(--accent)':'1.5px solid var(--border)'}">${d.day_label}</button>`).join('');
+  const {data:weeksData}=await sb.from('program_weeks').select('*,program_days(*,program_exercises(*))').eq('program_id',progs[0].id).order('week_num');
+  if(!weeksData||!weeksData.length){document.getElementById('log-body').innerHTML=`<div style="text-align:center;color:var(--muted);padding:40px 0">Program has no weeks yet.</div>`;return;}
+  logWeeks=weeksData;
+  const weekTabs=logWeeks.map((w,i)=>`<button class="log-week-tab" onclick="selWeek=${i};selDay=0;renderLogExercises()" style="padding:7px 16px;border-radius:20px;border:none;font-size:12px;font-weight:800;flex-shrink:0;white-space:nowrap;background:${i===selWeek?'var(--accent)':'var(--card2)'};color:${i===selWeek?'#0d0d0d':'var(--muted)'}">Week ${w.week_num}</button>`).join('');
+  const week=logWeeks[selWeek]||logWeeks[0];
+  const dayTabs=(week.program_days||[]).sort((a,b)=>a.order_index-b.order_index).map((d,i)=>`<button class="log-day-tab" onclick="selDay=${i};renderLogExercises()" style="padding:7px 14px;border-radius:20px;border:none;font-size:11px;font-weight:700;flex-shrink:0;white-space:nowrap;background:var(--card2);color:${i===selDay?'var(--accent)':'var(--muted)'};border:${i===selDay?'1.5px solid var(--accent)':'1.5px solid var(--border)'}">${d.day_label}</button>`).join('');
   document.getElementById('log-body').innerHTML=`
     <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:12px;-webkit-overflow-scrolling:touch;scrollbar-width:none">${weekTabs}</div>
     <div style="display:flex;gap:8px;overflow-x:auto;padding-bottom:16px;-webkit-overflow-scrolling:touch;scrollbar-width:none">${dayTabs}</div>
@@ -1019,53 +1109,7 @@ async function renderLog(){
     <button class="btn-primary" onclick="saveSession()">Save Session 💪</button>`;
   renderLogExercises();
 
-  async function renderLogExercises(){
-    const w=weeks[selWeek]||weeks[0];
-    const day=(w.program_days||[])[selDay]||w.program_days[0];
-    if(!day){return;}
-    document.getElementById('log-exercise-rows').innerHTML=(day.program_exercises||[]).map((ex,i)=>`
-      <div class="card" style="margin-bottom:12px">
-        <div class="row" style="margin-bottom:10px">
-          <div><div style="font-size:15px;font-weight:800">${ex.name}</div>${ex.notes?`<div style="font-size:11px;color:var(--muted);margin-top:2px">📝 ${ex.notes}</div>`:''}</div>
-          <div style="background:var(--accentdim);border:1px solid rgba(200,255,0,.2);border-radius:10px;padding:5px 10px;text-align:right;flex-shrink:0;margin-left:10px">
-            <div style="font-size:10px;color:var(--accent);text-transform:uppercase;letter-spacing:.8px">Target</div>
-            <div style="font-size:13px;font-weight:800;color:var(--accent)">${ex.sets}×${ex.reps}${ex.weight?' @ '+ex.weight+'kg':''}</div>
-            ${ex.rpe?`<div style="font-size:10px;color:rgba(200,255,0,.6)">RPE ${ex.rpe}</div>`:''}
-          </div>
-        </div>
-        <button onclick="toggleCues('lcues-${ex.id}')" style="background:none;border:1px solid var(--border);border-radius:8px;padding:4px 10px;font-size:11px;color:var(--muted);margin-bottom:8px">Form cues</button>
-        <div id="lcues-${ex.id}" style="display:none;margin-bottom:8px"></div>
-        <div style="font-size:10px;color:var(--muted);text-transform:uppercase;letter-spacing:1px;margin-bottom:6px">What you actually did:</div>
-        <div style="display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px">
-          <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">Sets</div><input id="ls-sets-${i}" type="number" value="${ex.sets}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
-          <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">Reps</div><input id="ls-reps-${i}" type="number" value="${ex.reps}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
-          <div><div style="font-size:10px;color:var(--muted);text-align:center;margin-bottom:4px">kg</div><input id="ls-weight-${i}" type="number" value="${ex.weight||''}" style="text-align:center;padding:10px 4px;font-size:15px;font-weight:700"/></div>
-        </div>
-      </div>`).join('');
 
-    window.saveSession=async function(){
-      const w2=weeks[selWeek]||weeks[0];
-      const d2=(w2.program_days||[])[selDay];
-      if(!d2) return;
-      const {data:workout}=await sb.from('workouts').insert({client_id:clientId,date:fmtToday(),week_label:'Week '+w2.week_num,day_label:d2.day_label}).select().single();
-      const exercises=d2.program_exercises||[];
-      for(let i=0;i<exercises.length;i++){
-        const ex=exercises[i];
-        const sets=+document.getElementById(`ls-sets-${i}`)?.value||ex.sets;
-        const reps=+document.getElementById(`ls-reps-${i}`)?.value||ex.reps;
-        const weight=+document.getElementById(`ls-weight-${i}`)?.value||ex.weight||0;
-        await sb.from('workout_exercises').insert({workout_id:workout.id,name:ex.name,sets,reps,weight,order_index:i});
-        // Check for PB
-        const {data:existingPB}=await sb.from('personal_bests').select('*').eq('client_id',clientId).eq('exercise',ex.name).single();
-        if(!existingPB||(weight>existingPB.weight||(weight===existingPB.weight&&reps>existingPB.reps))){
-          if(existingPB) await sb.from('personal_bests').update({weight,reps,date:fmtToday()}).eq('id',existingPB.id);
-          else await sb.from('personal_bests').insert({client_id:clientId,exercise:ex.name,weight,reps,date:fmtToday()});
-          if(weight>(existingPB?.weight||0)) toast(`🏆 New PB on ${ex.name}!`,'var(--gold)');
-        }
-      }
-      document.getElementById('log-body').innerHTML=`<div style="text-align:center;padding:48px 20px"><div style="font-size:64px;margin-bottom:16px">💪</div><div class="bc" style="font-size:32px;font-weight:900;color:var(--accent);margin-bottom:8px">Session Saved!</div><div style="font-size:14px;color:var(--muted);margin-bottom:6px">${d2.day_label}</div><div style="font-size:13px;color:var(--muted);margin-bottom:28px">${exercises.length} exercises logged</div><button class="btn-primary" onclick="goTo('progress')">View Progress</button></div>`;
-    };
-  }
 }
 
 // ─── ACTIVITY LOG ────────────────────────────────────────────────────────────
