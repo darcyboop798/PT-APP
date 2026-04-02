@@ -904,8 +904,12 @@ function lookupNutrition(input){
     const gm=line.match(/(\d+\.?\d*)\s*g(?:rams?)?/i);
     let grams=gm?parseFloat(gm[1]):null;
     let food=line.replace(/(\d+\.?\d*)\s*g(?:rams?)?/i,'').replace(/^\d+\.?\d*\s*/,'').trim().toLowerCase();
-    if(!grams){const cm=line.match(/^(\d+\.?\d*)\s+(.+)$/);if(cm){grams=parseFloat(cm[1])*60;food=cm[2].toLowerCase().trim();}}
-    if(!grams)grams=100;
+    if(!grams){const cm=line.match(/^(\d+\.?\d*)\s+(.+)$/);if(cm){const perItem={'egg':55,'eggs':55,'banana':120,'apple':180,'orange':150,'slice':30};const fg=perItem[cm[2]?.toLowerCase()?.trim()]||50;grams=parseFloat(cm[1])*fg;food=cm[2].toLowerCase().trim();}}
+    if(!grams){
+      const defs={'egg':55,'eggs':55,'banana':120,'apple':180,'orange':150,'bread':60,'chicken breast':170,'chicken thigh':130,'salmon':150,'tuna can':95,'avocado':150,'potato':180,'sweet potato':150};
+      let found=false;for(const [k,v] of Object.entries(defs)){if(food.includes(k)){grams=v;found=true;break;}}
+      if(!found)grams=100;
+    }
     let best=null,score=0;
     for(const key of Object.keys(NDATA)){
       let s=0;
@@ -1026,7 +1030,7 @@ function setLogTab(tab){
   document.getElementById('logtab-workout').style.color=tab==='workout'?'#0d0d0d':'var(--muted)';
   document.getElementById('logtab-activity').style.background=tab==='activity'?'var(--accent)':'var(--card2)';
   document.getElementById('logtab-activity').style.color=tab==='activity'?'#0d0d0d':'var(--muted)';
-  if(tab==='workout') renderLog();
+  if(tab==='workout'){if(logWeeks.length) renderLogExercises(); else renderLog();}
   else renderActivityLog();
 }
 
@@ -1069,8 +1073,8 @@ function renderLogExercises(){
     </div>`).join('');
 
   window.saveSession=async function(){
-    const w2=weeks[selWeek]||weeks[0];
-    const d2=(w2.program_days||[])[selDay];
+    const w2=logWeeks[selWeek]||logWeeks[0];
+    const d2=(w2.program_days||[]).sort((a,b)=>(a.order_index||0)-(b.order_index||0))[selDay];
     if(!d2) return;
     const {data:workout}=await sb.from('workouts').insert({client_id:clientId,date:fmtToday(),week_label:'Week '+w2.week_num,day_label:d2.day_label}).select().single();
     const exercises=d2.program_exercises||[];
