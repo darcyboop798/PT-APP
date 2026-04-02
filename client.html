@@ -859,7 +859,7 @@ async function renderFood(){
     const dayCals=dayEntries.reduce((s,f)=>s+(f.cals||0),0);
     return `<div class="card" style="margin-bottom:12px">
     <div class="row" style="padding-bottom:10px;border-bottom:1px solid var(--border);margin-bottom:4px"><span style="font-size:13px;font-weight:800;color:var(--accent)">${day.date}</span><span style="font-size:11px;color:var(--muted)">${Math.round(dayCals).toLocaleString()} kcal</span></div>
-    ${dayEntries.map(f=>`<div class="row" style="padding:5px 0;border-bottom:1px solid var(--border)"><div><span style="font-size:13px">${f.item}</span><span style="font-size:11px;color:var(--muted);margin-left:6px">${f.meal}</span></div><span style="font-size:12px;color:var(--muted)">${Math.round(f.cals||0)} kcal</span></div>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:6px 0">No entries</div>'}
+    ${dayEntries.map(f=>`<div style="display:flex;align-items:center;padding:6px 0;border-bottom:1px solid var(--border);gap:8px"><div style="flex:1;min-width:0"><span style="font-size:13px">${f.item}</span><span style="font-size:11px;color:var(--muted);margin-left:6px">${f.meal}</span></div><span style="font-size:12px;color:var(--muted);flex-shrink:0">${Math.round(f.cals||0)} kcal</span><button onclick="deleteFoodEntry('${f.id}','${day.id}')" style="background:none;border:none;color:var(--red);font-size:18px;padding:0 2px;flex-shrink:0;line-height:1">×</button></div>`).join('')||'<div style="font-size:12px;color:var(--muted);padding:6px 0">No entries</div>'}
   </div>`;}).join('')||`<div style="text-align:center;color:var(--muted);padding:30px 0">No food logged yet.</div>`;
   document.getElementById('food-body').innerHTML=html;
 
@@ -998,6 +998,15 @@ async function saveFood(){
   closeModal('logFood');
   toast('Food logged!');
   renderFood();
+}
+
+
+async function deleteFoodEntry(entryId, dayId){
+  if(!confirm('Remove this food entry?')) return;
+  await sb.from('food_entries').delete().eq('id',entryId);
+  toast('Entry removed');
+  renderFood();
+  renderToday();
 }
 
 async function recalcTotals(){
