@@ -819,7 +819,7 @@ async function renderProgress(){
     ${photos&&photos.length>=2?`<button onclick="openPhotoCompare()" style="width:100%;margin-top:12px;background:none;border:1px solid var(--border);border-radius:12px;padding:10px;color:var(--muted);font-size:13px;font-weight:700">Compare first & latest →</button>`:''}
   </div>`;
 
-  html += \`<button onclick="openModal('booking')" class="btn-primary" style="padding:14px;font-size:15px">📅 Book a Session</button>\`;
+  html += `<button onclick="openModal('booking')" class="btn-primary" style="padding:14px;font-size:15px">📅 Book a Session</button>`;
 
   // Recent sessions
   if(sessions&&sessions.length){
