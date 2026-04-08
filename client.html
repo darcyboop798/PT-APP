@@ -810,7 +810,7 @@ async function renderProgress(){
       <div style="font-size:12px;font-weight:800;color:var(--accent);text-transform:uppercase;letter-spacing:1px">📸 Progress Photos</div>
       <label style="background:var(--accentdim);color:var(--accent);border:1px solid rgba(200,255,0,.25);border-radius:20px;padding:6px 14px;font-size:12px;font-weight:700;cursor:pointer">
         + Upload
-        <input type="file" accept="image/*" capture="environment" onchange="uploadProgressPhoto(this)" style="display:none"/>
+        <input type="file" accept="image/*" onchange="uploadProgressPhoto(this)" style="display:none"/>
       </label>
     </div>
     ${photos&&photos.length ? `<div style="display:grid;grid-template-columns:1fr 1fr;gap:8px">
@@ -1353,9 +1353,17 @@ async function uploadProgressPhoto(input){
   const file = input.files[0];
   if(!file) return;
   toast('Uploading…','var(--muted)');
-  const path = `${clientId}/${Date.now()}-${file.name.replace(/[^a-z0-9.]/gi,'-')}`;
-  const {error} = await sb.storage.from('progress-photos').upload(path, file);
-  if(error){toast('Upload failed — try again','var(--red)');return;}
+  // Sanitise filename
+  const ext = file.name.split('.').pop().toLowerCase()||'jpg';
+  const path = `${clientId}/${Date.now()}.${ext}`;
+  const {data:upData, error} = await sb.storage.from('progress-photos').upload(path, file, {
+    cacheControl:'3600', upsert:false, contentType:file.type||'image/jpeg'
+  });
+  if(error){
+    console.error('Upload error:', JSON.stringify(error));
+    toast(error.message||error.error||JSON.stringify(error),'var(--red)');
+    return;
+  }
   await sb.from('progress_photos').insert({client_id:clientId,storage_path:path,date:fmtToday()});
   toast('Photo saved! 📸');
   renderProgress();
